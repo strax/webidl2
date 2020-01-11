@@ -7,7 +7,7 @@ import Text.Megaparsec (parse)
 import Language.WebIDL.Parser (pFragment)
 
 baselines :: [String]
-baselines = ["Lexing", "Simple", "Example10", "Example39", "Example12", "Example8"]
+baselines = ["Lexing", "Simple", "Example10", "Example39", "Example12", "Example8", "ExtendedAttributes", "DOM"]
 
 baselinePath :: String -> String
 baselinePath name = "test/baselines/" <> name <> ".webidl"

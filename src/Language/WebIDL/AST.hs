@@ -1,34 +1,65 @@
 module Language.WebIDL.AST where
 
+import Data.Scientific
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.Scientific
+import GHC.Generics (Generic)
 
-newtype Fragment = Fragment [Defn] deriving (Show, Eq)
+newtype Fragment = Fragment [Ann Defn] deriving (Show, Eq)
 
-data Defn where
-  Typedef :: Type -> Ident -> Defn
-  Interface :: Ident -> (Maybe Ident) -> [InterfaceMember] -> Defn
+data Defn
+  = Typedef Type Ident
+  | Interface Ident (Maybe Ident) [InterfaceMember]
+  | Namespace Ident [NamespaceMember]
+  deriving (Show, Eq, Generic)
 
-deriving instance Show Defn
+data InterfaceMember
+  = IAttribute (Ann Attribute)
+  | IOperation (Ann Operation)
+  | IConstructor Constructor
+  | IConstant (Ann Constant)
+  deriving (Show, Eq)
 
-deriving instance Eq Defn
+data NamespaceMember = NSAttribute (Ann Attribute) | NSOperation (Ann Operation) deriving (Show, Eq, Generic)
 
-data InterfaceMember = IAttribute Attribute | IOperation Operation | IConstant Constant deriving (Show, Eq)
+data Constant = Constant Type Ident ConstValue deriving (Show, Eq, Generic)
 
-data Constant = Constant Type Ident ConstValue deriving (Show, Eq)
+newtype ExtendedAttributeList = ExtendedAttributeList [ExtendedAttribute] deriving (Show, Eq, Semigroup, Monoid, Generic)
+
+newtype ArgumentList = ArgumentList [Argument] deriving (Show, Eq, Semigroup, Monoid, Generic)
+
+data Ann a = Ann ExtendedAttributeList a deriving (Show, Eq, Generic)
+
+data Constructor = Constructor ArgumentList deriving (Show, Eq, Generic)
+
+data ExtendedAttribute
+  = ExtendedAttributeNoArgs Ident
+  | ExtendedAttributeArgList Ident ArgumentList
+  | ExtendedAttributeNamedArgList Ident Ident ArgumentList
+  | ExtendedAttributeIdent Ident Ident
+  | ExtendedAttributeIdentList Ident [Ident]
+  deriving (Show, Eq, Generic)
 
 data Operation
-  = RegularOperation Type Ident [Argument]
+  = RegularOperation Type Ident ArgumentList
   | GetterOperation Type Ident
   | SetterOperation Type Ident
   | DeleterOperation Type Ident
   | StringifierOperation Type Ident
-  deriving (Show, Eq)
+  deriving (Show, Eq, Generic)
 
-data Argument = RegularArgument Type Ident | OptionalArgument Type Ident (Maybe ConstValue) | VariadicArgument Type Ident deriving (Show, Eq)
+data Argument
+  = RegularArgument Type Ident
+  | OptionalArgument Type Ident (Maybe ConstValue)
+  | VariadicArgument Type Ident
+  deriving (Show, Eq, Generic)
 
-data ConstValue = BooleanLiteral Bool | IntegerLiteral Int | ScientificLiteral Scientific deriving (Show, Eq)
+data ConstValue
+  = BooleanLiteral Bool
+  | IntegerLiteral Int
+  | ScientificLiteral Scientific
+  | StringLiteral Text
+  deriving (Show, Eq, Generic)
 
 data Attribute
   = Attribute
@@ -36,9 +67,9 @@ data Attribute
         ident :: Ident,
         readonly :: Bool
       }
-  deriving (Show, Eq)
+  deriving (Show, Eq, Generic)
 
-newtype Ident = Ident Text deriving (Show, Eq)
+newtype Ident = Ident Text deriving (Show, Eq, Generic)
 
 data Type
   = AnyT

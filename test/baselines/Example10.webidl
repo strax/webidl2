@@ -1,10 +1,10 @@
-// [Exposed=Window]
+[Exposed=Window]
 interface Dimensions {
   attribute unsigned long width;
   attribute unsigned long height;
 };
 
-// [Exposed=Window]
+[Exposed=Window]
 interface Button {
 
   // An operation that takes no arguments and returns a boolean.

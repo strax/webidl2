@@ -1,4 +1,4 @@
-// [Exposed=Window]
+[Exposed=Window]
 interface Util {
   const boolean DEBUG = false;
   const octet LF = 10;
