@@ -70,6 +70,9 @@ dependencies:
 - text
 - prettyprinter
 - scientific
+- pretty-show
+- prelude-extras
+- dependent-sum
 
 library:
   source-dirs: src

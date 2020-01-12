@@ -1,77 +1,123 @@
+{-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE DeriveAnyClass, DeriveDataTypeable #-}
+
 module Language.WebIDL.AST where
 
+import Data.Kind (Type)
 import Data.Scientific
 import Data.Text (Text)
 import qualified Data.Text as T
 import GHC.Generics (Generic)
+import Prelude.Extras (Show1(..), show1, Eq1(..))
+import Data.Typeable
+import Data.Data
 
-newtype Fragment = Fragment [Ann Defn] deriving (Show, Eq)
+data Fragment a = Fragment a [Definition a] deriving (Show, Eq)
 
-data Defn
-  = Typedef Type Ident
-  | Interface Ident (Maybe Ident) [InterfaceMember]
-  | Namespace Ident [NamespaceMember]
-  deriving (Show, Eq, Generic)
+data Definition a
+  = Typedef (TypedefDefinition a)
+  | Interface (InterfaceDefinition a)
+  | Namespace (NamespaceDefinition a)
+  deriving (Show, Eq, Generic, Functor)
 
-data InterfaceMember
-  = IAttribute (Ann Attribute)
-  | IOperation (Ann Operation)
-  | IConstructor Constructor
-  | IConstant (Ann Constant)
-  deriving (Show, Eq)
+class (Functor f) => IsInterfaceMember (f :: Type -> Type)
 
-data NamespaceMember = NSAttribute (Ann Attribute) | NSOperation (Ann Operation) deriving (Show, Eq, Generic)
+data TypedefDefinition a
+  = TypedefDefinition
+      { ann :: a,
+        attributes :: ExtendedAttributeList a,
+        name :: Ident,
+        type' :: TypeName
+      }
+  deriving (Show, Eq, Generic, Functor)
 
-data Constant = Constant Type Ident ConstValue deriving (Show, Eq, Generic)
+data InterfaceDefinition a
+  = InterfaceDefinition
+      { ann :: a,
+        attributes :: ExtendedAttributeList a,
+        name :: Ident,
+        parent :: Maybe Ident,
+        members :: [InterfaceMember a]
+      }
+  deriving (Show, Eq, Generic, Functor, Typeable)
 
-newtype ExtendedAttributeList = ExtendedAttributeList [ExtendedAttribute] deriving (Show, Eq, Semigroup, Monoid, Generic)
+data InterfaceMember a = IAttr (Attribute a) | IConst (Constant a) | IOp (Operation a) | ICtor (Constructor a)
+  deriving (Show, Eq, Generic, Functor, Typeable)
 
-newtype ArgumentList = ArgumentList [Argument] deriving (Show, Eq, Semigroup, Monoid, Generic)
+data NamespaceDefinition a
+  = NamespaceDefinition
+      { ann :: a,
+        attributes :: ExtendedAttributeList a,
+        name :: Ident,
+        members :: [NamespaceMember a]
+      }
+  deriving (Show, Eq, Generic, Functor, Typeable)
 
-data Ann a = Ann ExtendedAttributeList a deriving (Show, Eq, Generic)
+data NamespaceMember a
+  = NAttr (Attribute a)
+  | NOp (Operation a)
+  deriving (Show, Eq, Generic, Functor, Typeable)
 
-data Constructor = Constructor ArgumentList deriving (Show, Eq, Generic)
+data Constant a
+  = Constant
+      { ann :: a,
+        type' :: TypeName,
+        name :: Ident,
+        value :: ConstValue
+      }
+  deriving (Show, Eq, Generic, Functor, Typeable)
 
-data ExtendedAttribute
+newtype ExtendedAttributeList a = ExtendedAttributeList [ExtendedAttribute a]
+  deriving (Show, Eq, Semigroup, Monoid, Generic, Functor, Typeable)
+
+newtype ArgumentList a = ArgumentList [Argument a]
+  deriving (Show, Eq, Semigroup, Monoid, Generic, Functor, Typeable)
+
+data Constructor a = Constructor { ann :: a, arguments :: ArgumentList a }
+  deriving (Show, Eq, Generic, Functor, Typeable)
+
+data ExtendedAttribute a
   = ExtendedAttributeNoArgs Ident
-  | ExtendedAttributeArgList Ident ArgumentList
-  | ExtendedAttributeNamedArgList Ident Ident ArgumentList
+  | ExtendedAttributeArgList Ident (ArgumentList a)
+  | ExtendedAttributeNamedArgList Ident Ident (ArgumentList a)
   | ExtendedAttributeIdent Ident Ident
   | ExtendedAttributeIdentList Ident [Ident]
-  deriving (Show, Eq, Generic)
+  deriving (Show, Eq, Generic, Functor, Typeable)
 
-data Operation
-  = RegularOperation Type Ident ArgumentList
-  | GetterOperation Type Ident
-  | SetterOperation Type Ident
-  | DeleterOperation Type Ident
-  | StringifierOperation Type Ident
-  deriving (Show, Eq, Generic)
+data Operation a
+  = RegularOperation {ann :: a, type' :: TypeName, name :: Ident, arguments :: ArgumentList a}
+  | GetterOperation {ann :: a, type' :: TypeName, name :: Ident}
+  | SetterOperation {ann :: a, type' :: TypeName, name :: Ident}
+  | DeleterOperation {ann :: a, type' :: TypeName, name :: Ident}
+  | StringifierOperation {ann :: a, type' :: TypeName, name :: Ident}
+  deriving (Show, Eq, Generic, Functor, Typeable)
 
-data Argument
-  = RegularArgument Type Ident
-  | OptionalArgument Type Ident (Maybe ConstValue)
-  | VariadicArgument Type Ident
-  deriving (Show, Eq, Generic)
+data Argument a
+  = RegularArgument {ann :: a, type' :: TypeName, name :: Ident}
+  | OptionalArgument {ann :: a, type' :: TypeName, name :: Ident, defaultValue :: (Maybe DefaultValue)}
+  | VariadicArgument {ann :: a, type' :: TypeName, name :: Ident}
+  deriving (Show, Eq, Generic, Functor, Typeable)
+
+data DefaultValue = DefaultConst ConstValue | DefaultDict | DefaultSeq deriving (Show, Eq)
 
 data ConstValue
-  = BooleanLiteral Bool
-  | IntegerLiteral Int
-  | ScientificLiteral Scientific
-  | StringLiteral Text
-  deriving (Show, Eq, Generic)
+  = ConstBoolean Bool
+  | ConstNumeric Scientific
+  deriving (Show, Eq, Typeable, Generic)
 
-data Attribute
+data Attribute a
   = Attribute
-      { type' :: Type,
-        ident :: Ident,
+      { ann :: a,
+        attributes :: ExtendedAttributeList a,
+        type' :: TypeName,
+        name :: Ident,
         readonly :: Bool
       }
-  deriving (Show, Eq, Generic)
+  deriving (Show, Eq, Generic, Functor, Typeable)
 
-newtype Ident = Ident Text deriving (Show, Eq, Generic)
+newtype Ident = Ident Text deriving (Show, Eq, Generic, Typeable)
 
-data Type
+data TypeName
   = AnyT
   | VoidT
   | BooleanT
@@ -93,5 +139,8 @@ data Type
   | ObjectT
   | SymbolT
   | InterfaceType Ident
-  | NullableT Type
-  deriving (Show, Eq)
+  | NullableT TypeName
+  | SequenceT TypeName
+  | RecordT TypeName TypeName
+  | PromiseT TypeName
+  deriving (Show, Eq, Generic, Typeable)
