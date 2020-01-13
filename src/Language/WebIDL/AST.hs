@@ -161,10 +161,17 @@ data Constant a
   deriving (Show, Eq, Generic, Functor, Typeable)
 
 newtype ExtendedAttributeList a = ExtendedAttributeList [ExtendedAttribute a]
-  deriving (Show, Eq, Semigroup, Monoid, Generic, Functor, Typeable)
+  deriving (Show, Eq, Functor, Typeable)
+
+deriving newtype instance Semigroup (ExtendedAttributeList a)
+deriving newtype instance Monoid (ExtendedAttributeList a)
 
 newtype ArgumentList a = ArgumentList [Argument a]
-  deriving (Show, Eq, Semigroup, Monoid, Generic, Functor, Typeable)
+  deriving (Show, Eq, Generic, Functor, Typeable)
+
+  
+deriving newtype instance Semigroup (ArgumentList a)
+deriving newtype instance Monoid (ArgumentList a)
 
 data Constructor a
   = Constructor

@@ -19,7 +19,8 @@ baselines =
     "HTMLDOM",
     "Regression1",
     "Regression2",
-    "PartialInterfaceMixin"
+    "PartialInterfaceMixin",
+    "Types"
   ]
 
 baselinePath :: String -> String
