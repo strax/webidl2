@@ -1,31 +1,42 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE DeriveAnyClass, DeriveDataTypeable #-}
 
 module Language.WebIDL.AST where
 
+import Data.Data
 import Data.Kind (Type)
 import Data.Scientific
+import Data.Set (Set)
 import Data.Text (Text)
 import qualified Data.Text as T
-import GHC.Generics (Generic)
-import Prelude.Extras (Show1(..), show1, Eq1(..))
 import Data.Typeable
-import Data.Data
+import GHC.Generics (Generic)
+import Prelude.Extras (Eq1 (..), Show1 (..), show1)
 
 data Fragment a = Fragment a [Definition a] deriving (Show, Eq)
 
 data Definition a
   = Typedef (TypedefDefinition a)
   | Interface (InterfaceDefinition a)
+  | Mixin (MixinDefinition a)
+  | PartialMixin (MixinDefinition a)
+  | PartialInterface (PartialInterfaceDefinition a)
+  | CallbackInterface (CallbackInterfaceDefinition a)
   | Namespace (NamespaceDefinition a)
-  deriving (Show, Eq, Generic, Functor)
+  | Enum (EnumDefinition a)
+  | Dictionary (DictionaryDefinition a)
+  | IncludesStatement (IncludesStatementDefinition a)
+  | Callback (CallbackDefinition a)
+  deriving (Show, Eq, Generic, Functor, Typeable)
 
-class (Functor f) => IsInterfaceMember (f :: Type -> Type)
+data CallbackDefinition a
+  = CallbackDefinition { ann :: a, attributes :: ExtendedAttributeList a, name :: Ident, returnType :: TypeName, arguments :: ArgumentList a }
+  deriving (Show, Eq, Generic, Functor, Typeable)
 
 data TypedefDefinition a
   = TypedefDefinition
       { ann :: a,
-        attributes :: ExtendedAttributeList a,
         name :: Ident,
         type' :: TypeName
       }
@@ -41,7 +52,62 @@ data InterfaceDefinition a
       }
   deriving (Show, Eq, Generic, Functor, Typeable)
 
-data InterfaceMember a = IAttr (Attribute a) | IConst (Constant a) | IOp (Operation a) | ICtor (Constructor a)
+data MixinDefinition a
+  = MixinDefinition
+      { ann :: a,
+        name :: Ident,
+        members :: [MixinMember a] }
+  deriving (Show, Eq, Generic, Functor, Typeable)
+
+data PartialInterfaceDefinition a
+  = PartialInterfaceDefinition
+      { ann :: a,
+        attributes :: ExtendedAttributeList a,
+        name :: Ident,
+        members :: [PartialInterfaceMember a]
+      }
+  deriving (Show, Eq, Generic, Functor, Typeable)
+
+data IncludesStatementDefinition a
+  = IncludesStatementDefinition
+      { ann :: a,
+        interface :: Ident,
+        mixin :: Ident
+      }
+  deriving (Show, Eq, Generic, Functor, Typeable)
+
+data CallbackInterfaceDefinition a
+  = CallbackInterfaceDefinition
+      { ann :: a,
+        attributes :: ExtendedAttributeList a,
+        name :: Ident,
+        members :: [CallbackInterfaceMember a]
+      }
+  deriving (Show, Eq, Generic, Functor, Typeable)
+
+data MixinMember a
+  = MAttr (Attribute a) | MConst (Constant a) | MOp (Operation a)
+  deriving (Show, Eq, Generic, Functor, Typeable)
+
+data PartialInterfaceMember a
+  = PartialInterfaceAttribute (Attribute a)
+  | PartialInterfaceConstant  (Constant a)
+  | PartialInterfaceOperation (Operation a)
+  deriving (Show, Eq, Generic, Functor, Typeable)
+
+data CallbackInterfaceMember a = CallbackInterfaceConstant (Constant a) | CallbackInterfaceOperation (Operation a)
+  deriving (Show, Eq, Generic, Functor, Typeable)
+
+data InterfaceMember a
+  = InterfaceAttribute (Attribute a)
+  | InterfaceConstant (Constant a)
+  | InterfaceOperation (Operation a)
+  | InterfaceConstructor (Constructor a)
+  | InterfaceGetter (Getter a)
+  | InterfaceSetter (Setter a)
+  | InterfaceDeleter (Deleter a)
+  | InterfaceStringifiter (Stringifier a)
+  | InterfaceIterableDeclaration (IterableDeclaration a)
   deriving (Show, Eq, Generic, Functor, Typeable)
 
 data NamespaceDefinition a
@@ -56,6 +122,33 @@ data NamespaceDefinition a
 data NamespaceMember a
   = NAttr (Attribute a)
   | NOp (Operation a)
+  deriving (Show, Eq, Generic, Functor, Typeable)
+
+data EnumDefinition a
+  = EnumDefinition
+      { ann :: a,
+        name :: Ident,
+        values :: [Text]
+      }
+  deriving (Show, Eq, Generic, Functor, Typeable)
+
+data DictionaryDefinition a
+  = DictionaryDefinition
+      { ann :: a,
+        name :: Ident,
+        parent :: Maybe Ident,
+        members :: [DictionaryMember a]
+      }
+  deriving (Show, Eq, Generic, Functor, Typeable)
+
+data DictionaryMember a
+  = RequiredDictionaryMember {ann :: a, type' :: TypeName, name :: Ident}
+  | DictionaryMember {ann :: a, type' :: TypeName, name :: Ident, defaultValue :: Maybe DefaultValue}
+  deriving (Show, Eq, Generic, Functor, Typeable)
+
+data IterableDeclaration a
+  = ValueIteratorDeclaration { ann :: a, attributes :: ExtendedAttributeList a, value :: TypeWithExtendedAttributes a }
+  | PairIteratorDeclaration { ann :: a, attributes :: ExtendedAttributeList a, key :: TypeWithExtendedAttributes a, value :: TypeWithExtendedAttributes a }
   deriving (Show, Eq, Generic, Functor, Typeable)
 
 data Constant a
@@ -73,7 +166,12 @@ newtype ExtendedAttributeList a = ExtendedAttributeList [ExtendedAttribute a]
 newtype ArgumentList a = ArgumentList [Argument a]
   deriving (Show, Eq, Semigroup, Monoid, Generic, Functor, Typeable)
 
-data Constructor a = Constructor { ann :: a, arguments :: ArgumentList a }
+data Constructor a
+  = Constructor
+      { attributes :: ExtendedAttributeList a,
+        ann :: a,
+        arguments :: ArgumentList a
+      }
   deriving (Show, Eq, Generic, Functor, Typeable)
 
 data ExtendedAttribute a
@@ -85,20 +183,33 @@ data ExtendedAttribute a
   deriving (Show, Eq, Generic, Functor, Typeable)
 
 data Operation a
-  = RegularOperation {ann :: a, type' :: TypeName, name :: Ident, arguments :: ArgumentList a}
-  | GetterOperation {ann :: a, type' :: TypeName, name :: Ident}
-  | SetterOperation {ann :: a, type' :: TypeName, name :: Ident}
-  | DeleterOperation {ann :: a, type' :: TypeName, name :: Ident}
-  | StringifierOperation {ann :: a, type' :: TypeName, name :: Ident}
+  = Operation {ann :: a, attributes :: ExtendedAttributeList a, type' :: TypeName, name :: Ident, arguments :: ArgumentList a}
+  deriving (Show, Eq, Generic, Functor, Typeable)
+
+data Getter a
+  = Getter { ann :: a, attributes :: ExtendedAttributeList a, type' :: TypeWithExtendedAttributes a, name :: Maybe Ident, arguments :: ArgumentList a }
+  deriving (Show, Eq, Generic, Functor, Typeable)
+
+data Setter a
+  = Setter { ann :: a, attributes :: ExtendedAttributeList a, type' :: TypeWithExtendedAttributes a, name :: Maybe Ident, arguments :: ArgumentList a }
+  deriving (Show, Eq, Generic, Functor, Typeable)
+
+data Deleter a
+  = Deleter { ann :: a, attributes :: ExtendedAttributeList a, type' :: TypeWithExtendedAttributes a, arguments :: ArgumentList a }
+  deriving (Show, Eq, Generic, Functor, Typeable)
+
+data Stringifier a
+  = StringifierOperation { ann :: a, attributes :: ExtendedAttributeList a, type' :: TypeWithExtendedAttributes a, arguments :: ArgumentList a }
+  | StringifierAttribute { ann :: a, attributes :: ExtendedAttributeList a, type' :: TypeWithExtendedAttributes a, name :: Ident }
   deriving (Show, Eq, Generic, Functor, Typeable)
 
 data Argument a
-  = RegularArgument {ann :: a, type' :: TypeName, name :: Ident}
-  | OptionalArgument {ann :: a, type' :: TypeName, name :: Ident, defaultValue :: (Maybe DefaultValue)}
-  | VariadicArgument {ann :: a, type' :: TypeName, name :: Ident}
+  = RegularArgument {ann :: a, type' :: TypeWithExtendedAttributes a, name :: Ident}
+  | OptionalArgument {ann :: a, type' :: TypeWithExtendedAttributes a, name :: Ident, defaultValue :: (Maybe DefaultValue)}
+  | VariadicArgument {ann :: a, type' :: TypeWithExtendedAttributes a, name :: Ident}
   deriving (Show, Eq, Generic, Functor, Typeable)
 
-data DefaultValue = DefaultConst ConstValue | DefaultDict | DefaultSeq deriving (Show, Eq)
+data DefaultValue = DefaultConst ConstValue | DefaultString Text | DefaultDict | DefaultSeq | DefaultNull deriving (Show, Eq)
 
 data ConstValue
   = ConstBoolean Bool
@@ -109,13 +220,17 @@ data Attribute a
   = Attribute
       { ann :: a,
         attributes :: ExtendedAttributeList a,
-        type' :: TypeName,
+        type' :: TypeWithExtendedAttributes a,
         name :: Ident,
         readonly :: Bool
       }
   deriving (Show, Eq, Generic, Functor, Typeable)
 
-newtype Ident = Ident Text deriving (Show, Eq, Generic, Typeable)
+newtype Ident = Ident Text deriving (Show, Eq, Ord, Generic, Typeable)
+
+data TypeWithExtendedAttributes a
+  = TypeWithExtendedAttributes { ann :: a, attributes :: ExtendedAttributeList a, inner :: TypeName }
+  deriving (Show, Eq, Generic, Functor, Typeable)
 
 data TypeName
   = AnyT
@@ -143,4 +258,5 @@ data TypeName
   | SequenceT TypeName
   | RecordT TypeName TypeName
   | PromiseT TypeName
-  deriving (Show, Eq, Generic, Typeable)
+  | UnionT (Set TypeName)
+  deriving (Show, Eq, Ord, Generic, Typeable)
