@@ -1,0 +1,2 @@
+Retrieved at:   2020-01-14
+Retrieved from: https://github.com/w3c/webidl2.js/tree/286942bad1afdbcc0aab1b54294174e8c688e11f/test/syntax/idl
