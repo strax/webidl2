@@ -1,3 +1,5 @@
 .stack-work/
 webidl2.cabal
-*~
+*.iml
+.idea
+out
