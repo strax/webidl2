@@ -1,26 +1,26 @@
-import Control.Monad
-import Data.Text (Text)
-import qualified Data.Text as T
-import Language.WebIDL.Parser (pFragment)
-import Test.Hspec
-import Test.Hspec.Megaparsec
-import Text.Megaparsec (parse)
+import           Control.Monad
+import           Data.Text                      ( Text )
+import qualified Data.Text                     as T
+import           Language.WebIDL.Parser         ( pFragment )
+import           Test.Hspec
+import           Test.Hspec.Megaparsec
+import           Text.Megaparsec                ( parse )
 
 baselines :: [String]
 baselines =
-  [ "Lexing",
-    "Simple",
-    "Example10",
-    "Example39",
-    "Example12",
-    "Example8",
-    "ExtendedAttributes",
-    "DOM",
-    "HTMLDOM",
-    "Regression1",
-    "Regression2",
-    "PartialInterfaceMixin",
-    "Types"
+  [ "Lexing"
+  , "Simple"
+  , "Example10"
+  , "Example39"
+  , "Example12"
+  , "Example8"
+  , "ExtendedAttributes"
+  , "DOM"
+  , "HTMLDOM"
+  , "Regression1"
+  , "Regression2"
+  , "PartialInterfaceMixin"
+  , "Types"
   ]
 
 baselinePath :: String -> String
