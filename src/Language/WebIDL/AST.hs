@@ -31,7 +31,7 @@ data CallbackDefinition a = CallbackDefinition
   { ann        :: a
   , attributes :: ExtendedAttributeList a
   , name       :: Ident
-  , returnType :: TypeName
+  , returnType :: TypeName a
   , arguments  :: ArgumentList a
   }
   deriving (Show, Eq, Generic, Functor, Typeable)
@@ -140,8 +140,8 @@ data DictionaryDefinition a = DictionaryDefinition
   deriving (Show, Eq, Generic, Functor, Typeable)
 
 data DictionaryMember a
-  = RequiredDictionaryMember {ann :: a, type' :: TypeName, name :: Ident}
-  | DictionaryMember {ann :: a, type' :: TypeName, name :: Ident, defaultValue :: Maybe DefaultValue}
+  = RequiredDictionaryMember {ann :: a, type' :: TypeName a, name :: Ident}
+  | DictionaryMember {ann :: a, type' :: TypeName a, name :: Ident, defaultValue :: Maybe DefaultValue}
   deriving (Show, Eq, Generic, Functor, Typeable)
 
 data IterableDeclaration a
@@ -155,7 +155,7 @@ data AsyncIterableDeclaration a
 
 data Constant a = Constant
   { ann   :: a
-  , type' :: TypeName
+  , type' :: TypeName a
   , name  :: Ident
   , value :: ConstValue
   }
@@ -192,7 +192,7 @@ data ExtendedAttribute a
 data Operation a = Operation
   { ann        :: a
   , attributes :: ExtendedAttributeList a
-  , type'      :: TypeName
+  , type'      :: TypeName a
   , name       :: Ident
   , arguments  :: ArgumentList a
   }
@@ -262,35 +262,35 @@ newtype Ident = Ident Text deriving (Show, Eq, Ord, Generic, Typeable)
 data TypeWithExtendedAttributes a = TypeWithExtendedAttributes
   { ann        :: a
   , attributes :: ExtendedAttributeList a
-  , inner      :: TypeName
+  , inner      :: TypeName a
   }
   deriving (Show, Eq, Generic, Functor, Typeable)
 
-data TypeName
-  = AnyT
-  | VoidT
-  | BooleanT
-  | ByteT
-  | OctetT
-  | ShortT
-  | UShortT
-  | LongT
-  | ULongT
-  | LongLongT
-  | ULongLongT
-  | FloatT
-  | UnrestrictedFloatT
-  | DoubleT
-  | UnrestrictedDoubleT
-  | DOMStringT
-  | ByteStringT
-  | USVStringT
-  | ObjectT
-  | SymbolT
-  | InterfaceType Ident
-  | NullableT TypeName
-  | SequenceT TypeName
-  | RecordT TypeName TypeName
-  | PromiseT TypeName
-  | UnionT [TypeWithExtendedAttributes ()]
-  deriving (Show, Eq, Generic, Typeable)
+data TypeName a
+  = AnyT a
+  | VoidT a
+  | BooleanT a
+  | ByteT a
+  | OctetT a
+  | ShortT a
+  | UShortT a
+  | LongT a
+  | ULongT a
+  | LongLongT a
+  | ULongLongT a
+  | FloatT a
+  | UnrestrictedFloatT a
+  | DoubleT a
+  | UnrestrictedDoubleT a
+  | DOMStringT a
+  | ByteStringT a
+  | USVStringT a
+  | ObjectT a
+  | SymbolT a
+  | InterfaceType a Ident
+  | NullableT (TypeName a)
+  | SequenceT (TypeWithExtendedAttributes a)
+  | RecordT (TypeName a) (TypeName a)
+  | PromiseT (TypeName a)
+  | UnionT [TypeWithExtendedAttributes a]
+  deriving (Show, Eq, Functor, Generic, Typeable)

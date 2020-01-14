@@ -245,46 +245,52 @@ pConstant = stmt $ do
   value <- pConstValue
   pure $ Constant pos ty ident value
 
-integerType :: Parser TypeName
-integerType =
-  (ULongLongT <$ L.sym "unsigned long long")
-    <|> (LongLongT <$ L.sym "long long")
-    <|> (ULongT <$ L.sym "unsigned long")
-    <|> (UShortT <$ L.sym "unsigned short")
-    <|> (ShortT <$ L.sym "short")
-    <|> (OctetT <$ L.sym "octet")
-    <|> (ByteT <$ L.sym "byte")
+prim :: Text -> (forall a. a -> TypeName a) -> HParser TypeName
+prim tn f = f <$> getSourcePos <* L.sym tn
 
-numericType :: Parser TypeName
+integerType :: HParser TypeName
+integerType =
+  prim "unsigned long long" ULongLongT
+    <|> prim "long long" LongLongT
+    <|> prim "unsigned long" ULongT
+    <|> prim "unsigned short" UShortT
+    <|> prim "short" ShortT
+    <|> prim "octet" OctetT
+    <|> prim "byte" ByteT
+
+numericType :: HParser TypeName
 numericType =
   integerType
-    <|> (UnrestrictedFloatT <$ L.sym "unrestricted float")
-    <|> (UnrestrictedDoubleT <$ L.sym "unrestricted double")
-    <|> (FloatT <$ L.sym "float")
-    <|> (DoubleT <$ L.sym "double")
+    <|> prim "unrestricted float" UnrestrictedFloatT
+    <|> prim "unrestricted double" UnrestrictedDoubleT
+    <|> prim "float" FloatT
+    <|> prim "double" DoubleT
 
-primitiveType :: Parser TypeName
-primitiveType = numericType <|> pure BooleanT <* L.sym "boolean"
+primitiveType :: HParser TypeName
+primitiveType = numericType <|> prim "boolean" BooleanT
 
-stringType :: Parser TypeName
+stringType :: HParser TypeName
 stringType =
-  (DOMStringT <$ L.keyword "DOMString")
-    <|> (USVStringT <$ L.keyword "USVString")
-    <|> (ByteStringT <$ L.keyword "ByteString")
+  prim "DOMString" DOMStringT
+    <|> prim "USVString" USVStringT
+    <|> prim "ByteString" ByteStringT
 
-pAnyType :: Parser TypeName
-pAnyType = pure AnyT <* L.sym "any"
+pAnyType :: HParser TypeName
+pAnyType = prim "any" AnyT
 
-pVoidType :: Parser TypeName
-pVoidType = pure VoidT <* L.sym "void"
+pVoidType :: HParser TypeName
+pVoidType = prim "void" VoidT
 
-pInterfaceType :: Parser TypeName
-pInterfaceType = InterfaceType <$> pIdent
+pInterfaceType :: HParser TypeName
+pInterfaceType = InterfaceType <$> getSourcePos <*> pIdent
 
-pPromiseType :: Parser TypeName
-pPromiseType = pGenericType1 "Promise"
+pPromiseType :: HParser TypeName
+pPromiseType = pGenericType1 "Promise" PromiseT
 
-pType :: Parser TypeName
+pSequenceType :: HParser TypeName
+pSequenceType = pGenericType1' "sequence" SequenceT
+
+pType :: HParser TypeName
 pType =
   pUnionType
     <|> primitiveType
@@ -294,28 +300,28 @@ pType =
     <|> pInterfaceType
     <|> pAnyType
 
-pNullableType :: Parser TypeName
+pNullableType :: HParser TypeName
 pNullableType = try ((NullableT <$> pType) <* L.sym "?") <|> pType
 
 pTypeWithExtendedAttributes :: HParser TypeWithExtendedAttributes
 pTypeWithExtendedAttributes = pTypeWithExtendedAttributes' pNullableType
 
 pTypeWithExtendedAttributes'
-  :: Parser TypeName -> HParser TypeWithExtendedAttributes
+  :: HParser TypeName -> HParser TypeWithExtendedAttributes
 pTypeWithExtendedAttributes' pInner = do
   pos        <- getSourcePos
   attributes <- hidden pExtendedAttributeList
   inner      <- pInner
   pure $ TypeWithExtendedAttributes { ann = pos, attributes, inner }
 
-pGenericType1 :: Text -> Parser TypeName
-pGenericType1 tn = L.sym tn *> L.carets pNullableType
+pGenericType1 :: Text -> (forall a. TypeName a -> TypeName a) -> HParser TypeName
+pGenericType1 tn f = f <$> (L.sym tn *> L.carets pNullableType)
 
-pSequenceType :: Parser TypeName
-pSequenceType = pGenericType1 "sequence"
+pGenericType1' :: Text -> (forall a. TypeWithExtendedAttributes a -> TypeName a) -> HParser TypeName
+pGenericType1' tn f = f <$> (L.sym tn *> L.carets pTypeWithExtendedAttributes)
 
-pUnionType :: Parser TypeName
-pUnionType = UnionT <$> L.parens (sepBy1 ((() <$) <$> pTypeWithExtendedAttributes) (L.keyword "or"))
+pUnionType :: HParser TypeName
+pUnionType = UnionT <$> L.parens (sepBy1 pTypeWithExtendedAttributes (L.keyword "or"))
 
 pGetter :: HParser Getter
 pGetter = stmt $ do
@@ -343,7 +349,7 @@ pStringifier = stmt $ do
   let pShorthand = pure $ StringifierOperation
         pos
         attrs
-        (TypeWithExtendedAttributes pos mempty DOMStringT)
+        (TypeWithExtendedAttributes pos mempty (DOMStringT pos))
         mempty
   pStringifierAttribute <|> pStringifierOperation <|> pShorthand
 
