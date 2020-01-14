@@ -77,6 +77,7 @@ pInterfaceMember :: HParser InterfaceMember
 pInterfaceMember = do
   choice
     [ InterfaceSetlikeDeclaration <$> pSetlikeDeclaration
+    , InterfaceMaplikeDeclaration <$> pMaplikeDeclaration
     , InterfaceAsyncIterableDeclaration <$> try pAsyncIterableDeclaration 
     , InterfaceIterableDeclaration <$> try pIterableDeclaration
     , InterfaceStringifier <$> try pStringifier
@@ -96,6 +97,19 @@ pSetlikeDeclaration = stmt $ do
   where
     toConstructor True = ReadOnlySetlikeDeclaration
     toConstructor False = ReadWriteSetlikeDeclaration
+
+pMaplikeDeclaration :: HParser MaplikeDeclaration
+pMaplikeDeclaration = stmt $ do
+  pos <- getSourcePos
+  variant <- try $ toConstructor <$> modifier (L.keyword "readonly") <* L.keyword "maplike"
+  L.carets $ do
+    keyType <- pTypeWithExtendedAttributes
+    _ <- L.comma
+    valueType <- pTypeWithExtendedAttributes
+    pure $ variant pos keyType valueType
+  where
+    toConstructor True = ReadOnlyMaplikeDeclaration
+    toConstructor False = ReadWriteMaplikeDeclaration
 
 
 pAsyncIterableDeclaration :: HParser AsyncIterableDeclaration

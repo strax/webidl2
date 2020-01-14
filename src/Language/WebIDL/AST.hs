@@ -110,6 +110,7 @@ data InterfaceMember a
   | InterfaceIterableDeclaration (IterableDeclaration a)
   | InterfaceAsyncIterableDeclaration (AsyncIterableDeclaration a)
   | InterfaceSetlikeDeclaration (SetlikeDeclaration a)
+  | InterfaceMaplikeDeclaration (MaplikeDeclaration a)
   deriving (Show, Eq, Generic, Functor, Typeable)
 
 data NamespaceDefinition a = NamespaceDefinition
@@ -233,6 +234,11 @@ data Stringifier a
 data SetlikeDeclaration a
   = ReadWriteSetlikeDeclaration { ann :: a, type' :: TypeWithExtendedAttributes a }
   | ReadOnlySetlikeDeclaration { ann :: a, type' :: TypeWithExtendedAttributes a }
+  deriving (Show, Eq, Generic, Functor, Typeable)
+
+data MaplikeDeclaration a
+  = ReadWriteMaplikeDeclaration { ann :: a, keyType :: TypeWithExtendedAttributes a, valueType :: TypeWithExtendedAttributes a }
+  | ReadOnlyMaplikeDeclaration { ann :: a, keyType :: TypeWithExtendedAttributes a, valueType :: TypeWithExtendedAttributes a }
   deriving (Show, Eq, Generic, Functor, Typeable)
 
 data Argument a
