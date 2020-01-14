@@ -286,5 +286,5 @@ data TypeName
   | SequenceT TypeName
   | RecordT TypeName TypeName
   | PromiseT TypeName
-  | UnionT (Set TypeName)
-  deriving (Show, Eq, Ord, Generic, Typeable)
+  | UnionT [TypeWithExtendedAttributes ()]
+  deriving (Show, Eq, Generic, Typeable)

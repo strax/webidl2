@@ -303,7 +303,7 @@ pSequenceType :: Parser TypeName
 pSequenceType = pGenericType1 "sequence"
 
 pUnionType :: Parser TypeName
-pUnionType = (UnionT . Set.fromList) <$> L.parens (sepBy1 pType (L.keyword "or"))
+pUnionType = UnionT <$> L.parens (sepBy1 ((() <$) <$> pTypeWithExtendedAttributes) (L.keyword "or"))
 
 pGetter :: HParser Getter
 pGetter = stmt $ do
