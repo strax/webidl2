@@ -269,11 +269,15 @@ pVoidType = pure VoidT <* L.sym "void"
 pInterfaceType :: Parser TypeName
 pInterfaceType = InterfaceType <$> pIdent
 
+pPromiseType :: Parser TypeName
+pPromiseType = pGenericType1 "Promise"
+
 pType :: Parser TypeName
 pType =
   pUnionType
     <|> primitiveType
     <|> try stringType
+    <|> pPromiseType
     <|> pSequenceType
     <|> pInterfaceType
     <|> pAnyType
@@ -293,7 +297,7 @@ pTypeWithExtendedAttributes' pInner = do
   pure $ TypeWithExtendedAttributes { ann = pos, attributes, inner }
 
 pGenericType1 :: Text -> Parser TypeName
-pGenericType1 tn = L.sym tn *> L.carets pType
+pGenericType1 tn = L.sym tn *> L.carets pNullableType
 
 pSequenceType :: Parser TypeName
 pSequenceType = pGenericType1 "sequence"
