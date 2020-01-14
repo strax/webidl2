@@ -76,7 +76,8 @@ pInterface = stmt $ do
 pInterfaceMember :: HParser InterfaceMember
 pInterfaceMember = do
   choice
-    [ InterfaceIterableDeclaration <$> try pIterableDeclaration
+    [ InterfaceAsyncIterableDeclaration <$> try pAsyncIterableDeclaration 
+    , InterfaceIterableDeclaration <$> try pIterableDeclaration
     , InterfaceStringifier <$> try pStringifier
     , InterfaceGetter <$> try pGetter
     , InterfaceConstructor <$> try pConstructor
@@ -84,6 +85,17 @@ pInterfaceMember = do
     , InterfaceConstant <$> pConstant
     , InterfaceOperation <$> pOperation
     ]
+
+pAsyncIterableDeclaration :: HParser AsyncIterableDeclaration
+pAsyncIterableDeclaration = stmt $ do
+  pos        <- getSourcePos
+  attributes <- hidden pExtendedAttributeList
+  _          <- L.keyword "async" *> L.keyword "iterable"
+  L.carets $ do
+    key      <- pTypeWithExtendedAttributes
+    _        <- L.comma
+    value    <- pTypeWithExtendedAttributes
+    pure $ AsyncIterableDeclaration { ann = pos, attributes, key, value }
 
 pIterableDeclaration :: HParser IterableDeclaration
 pIterableDeclaration = stmt $ do

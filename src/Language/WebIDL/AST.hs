@@ -107,6 +107,7 @@ data InterfaceMember a
   | InterfaceDeleter (Deleter a)
   | InterfaceStringifier (Stringifier a)
   | InterfaceIterableDeclaration (IterableDeclaration a)
+  | InterfaceAsyncIterableDeclaration (AsyncIterableDeclaration a)
   deriving (Show, Eq, Generic, Functor, Typeable)
 
 data NamespaceDefinition a = NamespaceDefinition
@@ -145,6 +146,10 @@ data DictionaryMember a
 data IterableDeclaration a
   = ValueIteratorDeclaration { ann :: a, attributes :: ExtendedAttributeList a, value :: TypeWithExtendedAttributes a }
   | PairIteratorDeclaration { ann :: a, attributes :: ExtendedAttributeList a, key :: TypeWithExtendedAttributes a, value :: TypeWithExtendedAttributes a }
+  deriving (Show, Eq, Generic, Functor, Typeable)
+
+data AsyncIterableDeclaration a
+  = AsyncIterableDeclaration { ann :: a, attributes :: ExtendedAttributeList a, key :: TypeWithExtendedAttributes a, value :: TypeWithExtendedAttributes a }
   deriving (Show, Eq, Generic, Functor, Typeable)
 
 data Constant a = Constant
