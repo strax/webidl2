@@ -24,7 +24,7 @@ pIdent :: Parser Ident
 pIdent = label "identifier" $ L.lexeme $ Ident <$> p
   where
     p :: Parser Text
-    p = fst <$> match (optional (char '_') *> asciiLetter *> many (asciiLetter <|> digit <|> char '_'))
+    p = fst <$> match (optional (char '_' <|> char '-') *> asciiLetter *> many (asciiLetter <|> digit <|> char '_' <|> char '-'))
     asciiLetter = satisfy isLetter
     digit = satisfy isDigit
 
