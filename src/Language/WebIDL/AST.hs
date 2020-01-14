@@ -108,6 +108,7 @@ data InterfaceMember a
   | InterfaceStringifier (Stringifier a)
   | InterfaceIterableDeclaration (IterableDeclaration a)
   | InterfaceAsyncIterableDeclaration (AsyncIterableDeclaration a)
+  | InterfaceSetlikeDeclaration (SetlikeDeclaration a)
   deriving (Show, Eq, Generic, Functor, Typeable)
 
 data NamespaceDefinition a = NamespaceDefinition
@@ -226,6 +227,11 @@ data Deleter a = Deleter
 data Stringifier a
   = StringifierOperation { ann :: a, attributes :: ExtendedAttributeList a, type' :: TypeWithExtendedAttributes a, arguments :: ArgumentList a }
   | StringifierAttribute { ann :: a, attributes :: ExtendedAttributeList a, type' :: TypeWithExtendedAttributes a, name :: Ident }
+  deriving (Show, Eq, Generic, Functor, Typeable)
+
+data SetlikeDeclaration a
+  = ReadWriteSetlikeDeclaration { ann :: a, type' :: TypeWithExtendedAttributes a }
+  | ReadOnlySetlikeDeclaration { ann :: a, type' :: TypeWithExtendedAttributes a }
   deriving (Show, Eq, Generic, Functor, Typeable)
 
 data Argument a

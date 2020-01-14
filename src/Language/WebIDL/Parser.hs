@@ -76,7 +76,8 @@ pInterface = stmt $ do
 pInterfaceMember :: HParser InterfaceMember
 pInterfaceMember = do
   choice
-    [ InterfaceAsyncIterableDeclaration <$> try pAsyncIterableDeclaration 
+    [ InterfaceSetlikeDeclaration <$> pSetlikeDeclaration
+    , InterfaceAsyncIterableDeclaration <$> try pAsyncIterableDeclaration 
     , InterfaceIterableDeclaration <$> try pIterableDeclaration
     , InterfaceStringifier <$> try pStringifier
     , InterfaceGetter <$> try pGetter
@@ -85,6 +86,17 @@ pInterfaceMember = do
     , InterfaceConstant <$> pConstant
     , InterfaceOperation <$> pOperation
     ]
+
+pSetlikeDeclaration :: HParser SetlikeDeclaration
+pSetlikeDeclaration = stmt $ do
+  pos <- getSourcePos
+  variant <- try $ toConstructor <$> modifier (L.keyword "readonly") <* L.keyword "setlike"
+  tn <- L.carets pTypeWithExtendedAttributes
+  pure $ variant pos tn
+  where
+    toConstructor True = ReadOnlySetlikeDeclaration
+    toConstructor False = ReadWriteSetlikeDeclaration
+
 
 pAsyncIterableDeclaration :: HParser AsyncIterableDeclaration
 pAsyncIterableDeclaration = stmt $ do
