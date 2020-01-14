@@ -195,7 +195,7 @@ pTypedef :: HParser TypedefDefinition
 pTypedef = stmt $ do
   pos   <- getSourcePos
   _     <- try $ L.keyword "typedef"
-  type' <- pType
+  type' <- pTypeWithExtendedAttributes
   name  <- pIdent
   pure $ TypedefDefinition { ann = pos, name, type' }
 

@@ -39,7 +39,7 @@ data CallbackDefinition a = CallbackDefinition
 data TypedefDefinition a = TypedefDefinition
   { ann   :: a
   , name  :: Ident
-  , type' :: TypeName
+  , type' :: TypeWithExtendedAttributes a
   }
   deriving (Show, Eq, Generic, Functor)
 
