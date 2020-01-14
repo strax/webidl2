@@ -114,7 +114,7 @@ pInterfaceMember :: HParser InterfaceMember
 pInterfaceMember = do
   choice
     [ InterfaceIterableDeclaration <$> try pIterableDeclaration
-    , InterfaceStringifiter <$> try pStringifier
+    , InterfaceStringifier <$> try pStringifier
     , InterfaceGetter <$> try pGetter
     , InterfaceConstructor <$> try pConstructor
     , InterfaceAttribute <$> pAttribute
@@ -173,14 +173,8 @@ pPartialMixin = stmt $ do
   pos     <- getSourcePos
   _       <- try $ keyword "partial" *> keyword "interface" *> keyword "mixin"
   name    <- pIdent
-  members <- braces $ many pMember
+  members <- braces $ many pMixinMember
   pure $ MixinDefinition { ann = pos, name, members }
- where
-  pMember :: HParser MixinMember
-  pMember =
-    (MAttr <$> try pAttribute)
-      <|> (MConst <$> pConstant)
-      <|> (MOp <$> pOperation)
 
 pMixin :: HParser MixinDefinition
 pMixin = stmt $ do
@@ -192,7 +186,7 @@ pMixin = stmt $ do
 
 pMixinMember :: HParser MixinMember
 pMixinMember =
-  MAttr <$> try pAttribute <|> MConst <$> pConstant <|> MOp <$> pOperation
+  MixinAttribute <$> try pAttribute <|> MixinConstant <$> pConstant <|> MixinOperation <$> pOperation
 
 pConstructor :: HParser Constructor
 pConstructor = stmt $ do
@@ -212,7 +206,7 @@ pNamespace = stmt $ do
   pure $ NamespaceDefinition { ann = pos, attributes, name, members }
  where
   pMember :: HParser NamespaceMember
-  pMember = (NOp <$> pOperation) <|> (NAttr <$> pAttribute)
+  pMember = (NamespaceOperation <$> pOperation) <|> (NamespaceAttribute <$> pAttribute)
 
 pEnum :: HParser EnumDefinition
 pEnum = stmt $ do

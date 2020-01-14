@@ -83,7 +83,9 @@ data CallbackInterfaceDefinition a = CallbackInterfaceDefinition
   deriving (Show, Eq, Generic, Functor, Typeable)
 
 data MixinMember a
-  = MAttr (Attribute a) | MConst (Constant a) | MOp (Operation a)
+  = MixinAttribute (Attribute a)
+  | MixinConstant (Constant a)
+  | MixinOperation (Operation a)
   deriving (Show, Eq, Generic, Functor, Typeable)
 
 data PartialInterfaceMember a
@@ -103,7 +105,7 @@ data InterfaceMember a
   | InterfaceGetter (Getter a)
   | InterfaceSetter (Setter a)
   | InterfaceDeleter (Deleter a)
-  | InterfaceStringifiter (Stringifier a)
+  | InterfaceStringifier (Stringifier a)
   | InterfaceIterableDeclaration (IterableDeclaration a)
   deriving (Show, Eq, Generic, Functor, Typeable)
 
@@ -116,8 +118,8 @@ data NamespaceDefinition a = NamespaceDefinition
   deriving (Show, Eq, Generic, Functor, Typeable)
 
 data NamespaceMember a
-  = NAttr (Attribute a)
-  | NOp (Operation a)
+  = NamespaceAttribute (Attribute a)
+  | NamespaceOperation (Operation a)
   deriving (Show, Eq, Generic, Functor, Typeable)
 
 data EnumDefinition a = EnumDefinition
