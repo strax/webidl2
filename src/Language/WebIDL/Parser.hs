@@ -188,7 +188,7 @@ pEnum = stmt $ do
   pos    <- getSourcePos
   _      <- try $ L.keyword "enum"
   name   <- pIdent
-  values <- L.braces $ sepBy1 pStringLiteral L.comma
+  values <- L.braces $ sepEndBy1 pStringLiteral L.comma
   pure $ EnumDefinition { ann = pos, name, values }
 
 pTypedef :: HParser TypedefDefinition
