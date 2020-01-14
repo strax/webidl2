@@ -103,6 +103,8 @@ data InterfaceMember a
   | InterfaceConstant (Constant a)
   | InterfaceOperation (Operation a)
   | InterfaceConstructor (Constructor a)
+  | InterfaceStaticAttribute (Attribute a)
+  | InterfaceStaticOperation (Operation a)
   | InterfaceGetter (Getter a)
   | InterfaceSetter (Setter a)
   | InterfaceDeleter (Deleter a)

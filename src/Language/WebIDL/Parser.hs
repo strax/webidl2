@@ -76,7 +76,8 @@ pInterface = stmt $ do
 pInterfaceMember :: HParser InterfaceMember
 pInterfaceMember = do
   choice
-    [ InterfaceSetlikeDeclaration <$> pSetlikeDeclaration
+    [ L.keyword "static" *> pStaticMember
+    , InterfaceSetlikeDeclaration <$> pSetlikeDeclaration
     , InterfaceMaplikeDeclaration <$> pMaplikeDeclaration
     , InterfaceAsyncIterableDeclaration <$> try pAsyncIterableDeclaration 
     , InterfaceIterableDeclaration <$> try pIterableDeclaration
@@ -87,6 +88,8 @@ pInterfaceMember = do
     , InterfaceConstant <$> pConstant
     , InterfaceOperation <$> pOperation
     ]
+  where
+    pStaticMember = InterfaceStaticAttribute <$> pAttribute <|> InterfaceStaticOperation <$> pOperation
 
 pSetlikeDeclaration :: HParser SetlikeDeclaration
 pSetlikeDeclaration = stmt $ do
