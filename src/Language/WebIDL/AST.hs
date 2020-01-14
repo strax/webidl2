@@ -291,7 +291,7 @@ data TypeName a
   | InterfaceType a Ident
   | NullableT (TypeName a)
   | SequenceT (TypeWithExtendedAttributes a)
-  | RecordT (TypeName a) (TypeName a)
+  | RecordT (TypeName a) (TypeWithExtendedAttributes a)
   | PromiseT (TypeName a)
   | UnionT [TypeWithExtendedAttributes a]
   deriving (Show, Eq, Functor, Generic, Typeable)

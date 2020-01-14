@@ -297,6 +297,7 @@ pType =
     <|> primitiveType
     <|> try stringType
     <|> pPromiseType
+    <|> pRecordType
     <|> pSequenceType
     <|> pInterfaceType
     <|> pAnyType
@@ -323,6 +324,16 @@ pGenericType1' tn f = f <$> (L.sym tn *> L.carets pTypeWithExtendedAttributes)
 
 pUnionType :: HParser TypeName
 pUnionType = UnionT <$> L.parens (sepBy1 pTypeWithExtendedAttributes (L.keyword "or"))
+
+pRecordType :: HParser TypeName
+pRecordType = do
+  _ <- L.keyword "record"
+  L.carets $ do
+    keyType <- stringType
+    _ <- L.comma
+    valueType <- pTypeWithExtendedAttributes
+    pure $ RecordT keyType valueType
+
 
 pGetter :: HParser Getter
 pGetter = stmt $ do
