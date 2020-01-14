@@ -48,7 +48,7 @@ pExtendedAttributeIdentList =
   ExtendedAttributeIdentList <$> pIdent <* L.eq <*> L.parens (sepBy1 pIdent L.comma)
 
 pExtendedAttributeNamedArgList :: HParser ExtendedAttribute
-pExtendedAttributeNamedArgList =
+pExtendedAttributeNamedArgList = do
   ExtendedAttributeNamedArgList <$> pIdent <* L.eq <*> pIdent <*> pArgumentList
 
 -- pArgList :: Parser (Ident, [Argument ()])
