@@ -21,6 +21,7 @@ data Definition a
   | PartialInterface (PartialInterfaceDefinition a)
   | CallbackInterface (CallbackInterfaceDefinition a)
   | Namespace (NamespaceDefinition a)
+  | PartialNamespace (NamespaceDefinition a)
   | Enum (EnumDefinition a)
   | Dictionary (DictionaryDefinition a)
   | IncludesStatement (IncludesStatementDefinition a)

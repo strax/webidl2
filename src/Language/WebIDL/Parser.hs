@@ -173,7 +173,7 @@ pMixin = stmt $ do
 
 pMixinMember :: HParser MixinMember
 pMixinMember =
-  MixinAttribute <$> try pAttribute <|> MixinConstant <$> pConstant <|> MixinOperation <$> pOperation
+  (MixinAttribute <$> try pAttribute) <|> (MixinConstant <$> pConstant) <|> (MixinOperation <$> pOperation)
 
 pConstructor :: HParser Constructor
 pConstructor = stmt $ do
@@ -189,11 +189,12 @@ pNamespace = stmt $ do
   attributes <- hidden pExtendedAttributeList
   _          <- try $ L.keyword "namespace"
   name       <- pIdent
-  members    <- L.braces $ many pMember
+  members    <- L.braces $ many pNamespaceMember
   pure $ NamespaceDefinition { ann = pos, attributes, name, members }
- where
-  pMember :: HParser NamespaceMember
-  pMember = (NamespaceOperation <$> pOperation) <|> (NamespaceAttribute <$> pAttribute)
+
+pNamespaceMember :: HParser NamespaceMember
+pNamespaceMember =
+  (NamespaceAttribute <$> pAttribute) <|> (NamespaceOperation <$> pOperation) 
 
 pEnum :: HParser EnumDefinition
 pEnum = stmt $ do
@@ -484,6 +485,7 @@ pDefn = choice
   , Mixin <$> pMixin
   , PartialInterface <$> try pPartialInterface
   , Interface <$> try pInterface
+  , PartialNamespace <$> (L.keyword "partial" *> pNamespace)
   , Namespace <$> pNamespace
   , IncludesStatement <$> pIncludesStatement
   ]
