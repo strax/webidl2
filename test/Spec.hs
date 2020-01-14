@@ -85,8 +85,99 @@ conformanceTests =
   , "uniontype"
   , "variadic-operations" ]
 
+invalidTests = 
+  [ "any-keyword"
+  , "argument-dict-default"
+  , "argument-dict-nullable"
+  , "argument-dict-optional"
+  , "array"
+  , "async-iterable-readonly"
+  , "async-iterable-single"
+  , "async-maplike"
+  , "callback-attribute"
+  , "callback-noassign"
+  , "callback-noparen"
+  , "callback-noreturn"
+  , "callback-semicolon"
+  , "caller"
+  , "const-nullable"
+  , "const-null"
+  , "constructible-global"
+  , "constructor-escaped"
+  , "constructor"
+  , "dict-field-unterminated"
+  , "dict-no-default"
+  , "dict-required-default"
+  , "duplicate-escaped"
+  , "duplicate"
+  , "enum-bodyless"
+  , "enum-empty"
+  , "enum"
+  , "enum-wo-comma"
+  , "exception"
+  , "exposed"
+  , "extattr-double-field"
+  , "extattr-double"
+  , "extattr-empty-ids"
+  , "float"
+  , "frozenarray-empty"
+  , "id-underscored-number"
+  , "implements_and_includes_ws"
+  , "implements"
+  , "inheritance-typeless"
+  , "inherit-readonly"
+  , "int32array-keyword"
+  , "iterable-empty"
+  , "iterable-notype"
+  , "iterator"
+  , "legacyiterable"
+  , "maplike-1type"
+  , "module"
+  , "namespace-readwrite"
+  , "nonempty-sequence"
+  , "nonnullableany"
+  , "nonnullableobjects"
+  , "no-semicolon-callback"
+  , "no-semicolon-operation"
+  , "no-semicolon"
+  , "nullable-union-dictionary"
+  , "operation-nameless"
+  , "operation-too-special"
+  , "overloads"
+  , "promise-empty"
+  , "promise-nullable"
+  , "promise-with-extended-attribute"
+  , "raises"
+  , "readonly-iterable"
+  , "record-key"
+  , "record-key-with-extended-attribute"
+  , "record-single"
+  , "recursive-type"
+  , "scopedname"
+  , "sequenceAsAttribute"
+  , "sequence-empty"
+  , "setlike-2types"
+  , "setter-creator"
+  , "spaced-negative-infinity"
+  , "spaced-variadic"
+  , "special-omittable"
+  , "stray-slash"
+  , "stringconstants"
+  , "tostring-escaped"
+  , "tostring"
+  , "typedef-nested"
+  , "union-any"
+  , "union-dangling-or"
+  , "union-one"
+  , "union-promise"
+  , "union-zero"
+  , "unknown-generic" ]
+
 baselinePath :: String -> String
 baselinePath name = "test/baselines/" <> name <> ".webidl"
+
+invalidFixturePath :: String -> String
+invalidFixturePath name = "test/invalid/" <> name <> ".webidl"
 
 main :: IO ()
 main = hspec $ do
@@ -95,6 +186,11 @@ main = hspec $ do
 
   describe "Conformance tests" $ do
     forM_ conformanceTests $ \name -> it name $ parseFixture name
+
+  describe "Invalid" $ do
+    forM_ invalidTests $ \name -> it name $ do
+      raw <- T.pack <$> readFile (invalidFixturePath name)
+      parse pFragment (invalidFixturePath name) `shouldFailOn` raw
 
 
 parseFixture :: String -> IO ()
