@@ -339,8 +339,11 @@ pGenericType1 tn f = f <$> (L.sym tn *> L.carets pNullableType)
 pGenericType1' :: Text -> (forall a. TypeWithExtendedAttributes a -> TypeName a) -> HParser TypeName
 pGenericType1' tn f = f <$> (L.sym tn *> L.carets pTypeWithExtendedAttributes)
 
+sepBy2 :: Parser a -> Parser sep -> Parser [a]
+sepBy2 p sep = (:) <$> p <* sep <*> sepBy1 p sep
+
 pUnionType :: HParser TypeName
-pUnionType = UnionT <$> L.parens (sepBy1 pTypeWithExtendedAttributes (L.keyword "or"))
+pUnionType = UnionT <$> L.parens (sepBy2 pTypeWithExtendedAttributes (L.keyword "or"))
 
 pRecordType :: HParser TypeName
 pRecordType = do
