@@ -360,7 +360,7 @@ modifier :: Parser a -> Parser Bool
 modifier p = option False (p *> pure True)
 
 pAttribute :: HParser Attribute
-pAttribute = dbg "pAttribute" $ stmt $ try $ do
+pAttribute = stmt $ try $ do
   pos        <- getSourcePos
   attributes <- hidden pExtendedAttributeList
   readonly   <- modifier $ keyword "readonly"
