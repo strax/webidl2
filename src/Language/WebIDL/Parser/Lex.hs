@@ -37,6 +37,9 @@ comma = sym ","
 colon :: Parser Text
 colon = sym ":"
 
+dot :: Parser Text
+dot = sym "."
+
 eq :: Parser Text
 eq = sym "="
 
@@ -51,3 +54,6 @@ hexadecimal = L.hexadecimal
 
 scientific :: Parser Scientific
 scientific = L.scientific
+
+signed :: Num a => Parser a -> Parser a
+signed = L.signed ws

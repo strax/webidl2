@@ -75,6 +75,7 @@ dependencies:
 - dependent-sum
 - containers
 - generics-sop
+- ieee754
 
 library:
   source-dirs: src

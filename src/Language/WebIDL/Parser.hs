@@ -18,6 +18,7 @@ import           Text.Megaparsec
 import           Text.Megaparsec.Char
 import           Text.Megaparsec.Debug          ( dbg )
 import           Data.Char                      ( isLetter, isDigit )
+import           Numeric.IEEE
 
 pIdent :: Parser Ident
 pIdent = label "identifier" $ L.lexeme $ Ident <$> p
@@ -349,17 +350,24 @@ pOperation = stmt $ do
 pConstValue :: Parser ConstValue
 pConstValue =
   (ConstBoolean <$> pBooleanLiteral)
-    <|> (ConstNumeric <$> pHexLiteral)
-    <|> (ConstNumeric <$> pScientificLiteral)
+    <|> (ConstInt <$> pHexLiteral)
+    <|> (ConstInt <$> pIntegerLiteral)
+    <|> (ConstFloat <$> pFloatLiteral)
 
 pBooleanLiteral :: Parser Bool
 pBooleanLiteral = (pure True <* L.sym "true") <|> (pure False <* L.sym "false")
 
 pIntegerLiteral :: Parser Int
-pIntegerLiteral = L.decimal
+pIntegerLiteral = try $ L.decimal <* notFollowedBy L.dot
 
-pScientificLiteral :: Parser Scientific
-pScientificLiteral = L.scientific
+pInfinity :: Parser Float
+pInfinity = L.signed $ infinity <$ L.keyword "Infinity"
+
+pNaN :: Parser Float
+pNaN = nan <$ L.keyword "NaN"
+
+pFloatLiteral :: Parser Float
+pFloatLiteral = try pNaN <|> try pInfinity <|> Scientific.toRealFloat <$> L.signed L.scientific
 
 pStringLiteral :: Parser Text
 pStringLiteral = L.lexeme $ char '"' *> takeWhileP Nothing (/= '"') <* char '"'

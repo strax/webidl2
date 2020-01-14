@@ -233,7 +233,8 @@ data DefaultValue = DefaultConst ConstValue | DefaultString Text | DefaultDict |
 
 data ConstValue
   = ConstBoolean Bool
-  | ConstNumeric Scientific
+  | ConstInt Int
+  | ConstFloat Float
   deriving (Show, Eq, Typeable, Generic)
 
 data Attribute a = Attribute
