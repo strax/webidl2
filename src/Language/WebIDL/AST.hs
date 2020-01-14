@@ -224,9 +224,9 @@ data Stringifier a
   deriving (Show, Eq, Generic, Functor, Typeable)
 
 data Argument a
-  = RegularArgument { ann :: a, type' :: TypeWithExtendedAttributes a, name :: Ident }
-  | OptionalArgument {ann :: a, type' :: TypeWithExtendedAttributes a, name :: Ident, defaultValue :: (Maybe DefaultValue)}
-  | VariadicArgument {ann :: a, type' :: TypeWithExtendedAttributes a, name :: Ident}
+  = RegularArgument { ann :: a, attributes :: ExtendedAttributeList a, type' :: TypeWithExtendedAttributes a, name :: Ident }
+  | OptionalArgument {ann :: a, attributes :: ExtendedAttributeList a, type' :: TypeWithExtendedAttributes a, name :: Ident, defaultValue :: (Maybe DefaultValue)}
+  | VariadicArgument {ann :: a, attributes :: ExtendedAttributeList a, type' :: TypeWithExtendedAttributes a, name :: Ident}
   deriving (Show, Eq, Generic, Functor, Typeable)
 
 data DefaultValue = DefaultConst ConstValue | DefaultString Text | DefaultDict | DefaultSeq | DefaultNull deriving (Show, Eq)

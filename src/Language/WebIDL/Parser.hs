@@ -380,23 +380,25 @@ pDefaultValue =
 pOptionalArgument :: HParser Argument
 pOptionalArgument = do
   pos          <- getSourcePos
+  attributes   <- hidden pExtendedAttributeList
   _            <- L.sym "optional"
   ty           <- pTypeWithExtendedAttributes
   ident        <- pIdent
   defaultValue <- optional (L.sym "=" *> pDefaultValue)
-  pure $ OptionalArgument { ann = pos, type' = ty, name = ident, defaultValue }
+  pure $ OptionalArgument { ann = pos, attributes, type' = ty, name = ident, defaultValue }
 
 pVariadicArgument :: HParser Argument
 pVariadicArgument = do
   pos   <- getSourcePos
+  attributes <- hidden pExtendedAttributeList
   ty    <- pTypeWithExtendedAttributes
   _     <- L.sym "..."
   ident <- pIdent
-  pure $ VariadicArgument { ann = pos, type' = ty, name = ident }
+  pure $ VariadicArgument { ann = pos, attributes, type' = ty, name = ident }
 
 pRegularArgument :: HParser Argument
 pRegularArgument =
-  RegularArgument <$> getSourcePos <*> pTypeWithExtendedAttributes <*> pIdent
+  (flip RegularArgument) <$> hidden pExtendedAttributeList <*> getSourcePos <*> pTypeWithExtendedAttributes <*> pIdent
 
 pArgumentList :: HParser ArgumentList
 pArgumentList = L.parens $ ArgumentList <$> sepBy pArgument L.comma
