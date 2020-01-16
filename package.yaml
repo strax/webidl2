@@ -70,12 +70,12 @@ dependencies:
 - text
 - prettyprinter
 - scientific
-- pretty-show
 - prelude-extras
 - dependent-sum
 - containers
 - generics-sop
 - ieee754
+- pretty-simple
 
 library:
   source-dirs: src

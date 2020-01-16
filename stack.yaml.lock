@@ -25,6 +25,13 @@ packages:
       sha256: b0bcc96d375ee11b1972a2e9e8e42039b3f420b0e1c46e9c70652470445a6505
   original:
     hackage: constraints-extras-0.3.0.2
+- completed:
+    hackage: Cabal-2.4.0.1@sha256:81b388aab88f21eea46425f25d7b0256edda6473cb40eed949a94f83b31a69a7,21190
+    pantry-tree:
+      size: 59797
+      sha256: e656638cdfa85a332a10111ee9f386003e66b148db4db7b0b514594cd6fb5687
+  original:
+    hackage: Cabal-2.4.0.1
 snapshots:
 - completed:
     size: 524154

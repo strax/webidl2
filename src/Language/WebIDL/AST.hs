@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Language.WebIDL.AST where
 
@@ -9,9 +10,13 @@ import           Data.Scientific
 import           Data.Set                       ( Set )
 import           Data.Text                      ( Text )
 import           GHC.Generics                   ( Generic )
+import qualified Generics.SOP                  as SOP
+import           Generics.SOP.TH
+
+-- Top level structures
 
 data Fragment a = Fragment a [Definition a]
-  deriving (Show, Eq)
+  deriving (Show, Eq, Generic, Functor, Typeable)
 
 data Definition a
   = Typedef (TypedefDefinition a)
@@ -27,6 +32,8 @@ data Definition a
   | IncludesStatement (IncludesStatementDefinition a)
   | Callback (CallbackDefinition a)
   deriving (Show, Eq, Generic, Functor, Typeable)
+
+-- Definitions
 
 data CallbackDefinition a = CallbackDefinition
   { ann        :: a
@@ -83,6 +90,31 @@ data CallbackInterfaceDefinition a = CallbackInterfaceDefinition
   }
   deriving (Show, Eq, Generic, Functor, Typeable)
 
+data NamespaceDefinition a = NamespaceDefinition
+  { ann        :: a
+  , attributes :: ExtendedAttributeList a
+  , name       :: Ident
+  , members    :: [NamespaceMember a]
+  }
+  deriving (Show, Eq, Generic, Functor, Typeable)
+
+data EnumDefinition a = EnumDefinition
+  { ann    :: a
+  , name   :: Ident
+  , values :: [Text]
+  }
+  deriving (Show, Eq, Generic, Functor, Typeable)
+
+data DictionaryDefinition a = DictionaryDefinition
+  { ann     :: a
+  , name    :: Ident
+  , parent  :: Maybe Ident
+  , members :: [DictionaryMember a]
+  }
+  deriving (Show, Eq, Generic, Functor, Typeable)
+
+-- Definition member types
+
 data MixinMember a
   = MixinAttribute (Attribute a)
   | MixinConstant (Constant a)
@@ -115,38 +147,17 @@ data InterfaceMember a
   | InterfaceMaplikeDeclaration (MaplikeDeclaration a)
   deriving (Show, Eq, Generic, Functor, Typeable)
 
-data NamespaceDefinition a = NamespaceDefinition
-  { ann        :: a
-  , attributes :: ExtendedAttributeList a
-  , name       :: Ident
-  , members    :: [NamespaceMember a]
-  }
-  deriving (Show, Eq, Generic, Functor, Typeable)
-
 data NamespaceMember a
   = NamespaceAttribute (Attribute a)
   | NamespaceOperation (Operation a)
-  deriving (Show, Eq, Generic, Functor, Typeable)
-
-data EnumDefinition a = EnumDefinition
-  { ann    :: a
-  , name   :: Ident
-  , values :: [Text]
-  }
-  deriving (Show, Eq, Generic, Functor, Typeable)
-
-data DictionaryDefinition a = DictionaryDefinition
-  { ann     :: a
-  , name    :: Ident
-  , parent  :: Maybe Ident
-  , members :: [DictionaryMember a]
-  }
   deriving (Show, Eq, Generic, Functor, Typeable)
 
 data DictionaryMember a
   = RequiredDictionaryMember {ann :: a, type' :: TypeName a, name :: Ident}
   | DictionaryMember {ann :: a, type' :: TypeName a, name :: Ident, defaultValue :: Maybe DefaultValue}
   deriving (Show, Eq, Generic, Functor, Typeable)
+
+-- Statements
 
 data IterableDeclaration a
   = ValueIteratorDeclaration { ann :: a, attributes :: ExtendedAttributeList a, value :: TypeWithExtendedAttributes a }
@@ -157,6 +168,15 @@ data AsyncIterableDeclaration a
   = AsyncIterableDeclaration { ann :: a, attributes :: ExtendedAttributeList a, key :: TypeWithExtendedAttributes a, value :: TypeWithExtendedAttributes a }
   deriving (Show, Eq, Generic, Functor, Typeable)
 
+data Attribute a = Attribute
+  { ann        :: a
+  , attributes :: ExtendedAttributeList a
+  , type'      :: TypeWithExtendedAttributes a
+  , name       :: Ident
+  , readonly   :: Bool
+  }
+  deriving (Show, Eq, Generic, Functor, Typeable)
+
 data Constant a = Constant
   { ann   :: a
   , type' :: TypeName a
@@ -165,19 +185,6 @@ data Constant a = Constant
   }
   deriving (Show, Eq, Generic, Functor, Typeable)
 
-newtype ExtendedAttributeList a = ExtendedAttributeList [ExtendedAttribute a]
-  deriving (Show, Eq, Functor, Typeable)
-
-deriving newtype instance Semigroup (ExtendedAttributeList a)
-deriving newtype instance Monoid (ExtendedAttributeList a)
-
-newtype ArgumentList a = ArgumentList [Argument a]
-  deriving (Show, Eq, Generic, Functor, Typeable)
-
-
-deriving newtype instance Semigroup (ArgumentList a)
-deriving newtype instance Monoid (ArgumentList a)
-
 data Constructor a = Constructor
   { attributes :: ExtendedAttributeList a
   , ann        :: a
@@ -185,13 +192,6 @@ data Constructor a = Constructor
   }
   deriving (Show, Eq, Generic, Functor, Typeable)
 
-data ExtendedAttribute a
-  = ExtendedAttributeNoArgs Ident
-  | ExtendedAttributeArgList Ident (ArgumentList a)
-  | ExtendedAttributeNamedArgList Ident Ident (ArgumentList a)
-  | ExtendedAttributeIdent Ident Ident
-  | ExtendedAttributeIdentList Ident [Ident]
-  deriving (Show, Eq, Generic, Functor, Typeable)
 
 data Operation a = Operation
   { ann        :: a
@@ -243,6 +243,26 @@ data MaplikeDeclaration a
   | ReadOnlyMaplikeDeclaration { ann :: a, keyType :: TypeWithExtendedAttributes a, valueType :: TypeWithExtendedAttributes a }
   deriving (Show, Eq, Generic, Functor, Typeable)
 
+newtype ArgumentList a = ArgumentList [Argument a]
+  deriving (Show, Eq, Generic, Functor, Typeable)
+
+deriving newtype instance Semigroup (ArgumentList a)
+deriving newtype instance Monoid (ArgumentList a)
+
+newtype ExtendedAttributeList a = ExtendedAttributeList [ExtendedAttribute a]
+  deriving (Show, Eq, Functor, Typeable)
+
+deriving newtype instance Semigroup (ExtendedAttributeList a)
+deriving newtype instance Monoid (ExtendedAttributeList a)
+
+data ExtendedAttribute a
+  = ExtendedAttributeNoArgs Ident
+  | ExtendedAttributeArgList Ident (ArgumentList a)
+  | ExtendedAttributeNamedArgList Ident Ident (ArgumentList a)
+  | ExtendedAttributeIdent Ident Ident
+  | ExtendedAttributeIdentList Ident [Ident]
+  deriving (Show, Eq, Generic, Functor, Typeable)
+
 data Argument a
   = RegularArgument { ann :: a, attributes :: ExtendedAttributeList a, type' :: TypeWithExtendedAttributes a, name :: Ident }
   | OptionalArgument {ann :: a, attributes :: ExtendedAttributeList a, type' :: TypeWithExtendedAttributes a, name :: Ident, defaultValue :: (Maybe DefaultValue)}
@@ -256,15 +276,6 @@ data ConstValue
   | ConstInt Int
   | ConstFloat Float
   deriving (Show, Eq, Typeable, Generic)
-
-data Attribute a = Attribute
-  { ann        :: a
-  , attributes :: ExtendedAttributeList a
-  , type'      :: TypeWithExtendedAttributes a
-  , name       :: Ident
-  , readonly   :: Bool
-  }
-  deriving (Show, Eq, Generic, Functor, Typeable)
 
 newtype Ident = Ident Text deriving (Show, Eq, Ord, Generic, Typeable)
 
@@ -303,3 +314,44 @@ data TypeName a
   | PromiseT (TypeName a)
   | UnionT [TypeWithExtendedAttributes a]
   deriving (Show, Eq, Functor, Generic, Typeable)
+
+deriveGeneric ''Argument
+deriveGeneric ''ArgumentList
+deriveGeneric ''AsyncIterableDeclaration
+deriveGeneric ''Attribute
+deriveGeneric ''CallbackDefinition
+deriveGeneric ''CallbackInterfaceDefinition
+deriveGeneric ''CallbackInterfaceMember
+deriveGeneric ''Constant
+deriveGeneric ''Constructor
+deriveGeneric ''ConstValue
+deriveGeneric ''DefaultValue
+deriveGeneric ''Definition
+deriveGeneric ''Deleter
+deriveGeneric ''DictionaryDefinition
+deriveGeneric ''DictionaryMember
+deriveGeneric ''EnumDefinition
+deriveGeneric ''ExtendedAttribute
+deriveGeneric ''ExtendedAttributeList
+deriveGeneric ''Fragment
+deriveGeneric ''Getter
+deriveGeneric ''Ident
+deriveGeneric ''IncludesStatementDefinition
+deriveGeneric ''InterfaceDefinition
+deriveGeneric ''InterfaceMember
+deriveGeneric ''IterableDeclaration
+deriveGeneric ''MaplikeDeclaration
+deriveGeneric ''MixinDefinition
+deriveGeneric ''MixinMember
+deriveGeneric ''NamespaceDefinition
+deriveGeneric ''NamespaceMember
+deriveGeneric ''Operation
+deriveGeneric ''PartialInterfaceDefinition
+deriveGeneric ''PartialInterfaceMember
+deriveGeneric ''SetlikeDeclaration
+deriveGeneric ''Setter
+deriveGeneric ''Stringifier
+deriveGeneric ''TypedefDefinition
+deriveGeneric ''TypeName
+deriveGeneric ''TypeWithExtendedAttributes
+

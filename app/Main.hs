@@ -3,16 +3,22 @@ module Main where
 import Prelude hiding (readFile)
 import Text.Megaparsec
 import Data.Text.IO (readFile)
-import Data.Text.Prettyprint.Doc (pretty)
 import Data.Text.Prettyprint.Doc.Render.Text
 import Language.WebIDL.AST
 import Language.WebIDL.Parser (pFragment)
-import Text.Show.Pretty (pPrint)
+import Control.Monad.IO.Class
+import Text.Pretty.Simple (pPrint)
+
+parseFixture :: IO (Fragment SourcePos)
+parseFixture = do
+  content <- readFile "test/baselines/allowany.webidl"
+  case (parse pFragment "test/baselines/allowany.webidl" content) of
+    Right ast -> pure ast
+    Left err -> do
+      putStr $ errorBundlePretty err
+      fail "Cannot parse fixture"
 
 main :: IO ()
 main = do
-  content <- readFile "test/baselines/DOM.webidl"
-  case (parse pFragment "test/baselines/DOM.webidl" content) of
-    Right ast -> pPrint ast
-    Left err -> putStr $ errorBundlePretty err
-
+  ast <- parseFixture
+  pPrint ast
