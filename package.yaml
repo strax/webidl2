@@ -73,6 +73,7 @@ dependencies:
 - containers
 - ieee754
 - template-haskell
+- deepseq
 
 library:
   source-dirs: src
