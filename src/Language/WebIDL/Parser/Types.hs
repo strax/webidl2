@@ -1,6 +1,6 @@
 module Language.WebIDL.Parser.Types (Parser, HParser) where
 
-import Text.Megaparsec (Parsec, SourcePos)
+import Text.Megaparsec
 import Data.Text (Text)
 import Data.Void (Void)
 import Data.Kind (Type)

@@ -24,6 +24,7 @@ data Definition a
   | PartialNamespace (NamespaceDefinition a)
   | Enum (EnumDefinition a)
   | Dictionary (DictionaryDefinition a)
+  | PartialDictionary (PartialDictionaryDefinition a)
   | IncludesStatement (IncludesStatementDefinition a)
   | Callback (CallbackDefinition a)
   deriving (Show, Eq, Generic, Functor, Typeable)
@@ -40,7 +41,7 @@ data CallbackDefinition a = CallbackDefinition
 data TypedefDefinition a = TypedefDefinition
   { ann   :: a
   , name  :: Ident
-  , type' :: TypeWithExtendedAttributes a
+  , type' :: TypeName a
   }
   deriving (Show, Eq, Generic, Functor)
 
@@ -91,8 +92,18 @@ data MixinMember a
 
 data PartialInterfaceMember a
   = PartialInterfaceAttribute (Attribute a)
-  | PartialInterfaceConstant  (Constant a)
+  | PartialInterfaceConstant (Constant a)
   | PartialInterfaceOperation (Operation a)
+  | PartialInterfaceStaticAttribute (Attribute a)
+  | PartialInterfaceStaticOperation (Operation a)
+  | PartialInterfaceGetter (Getter a)
+  | PartialInterfaceSetter (Setter a)
+  | PartialInterfaceDeleter (Deleter a)
+  | PartialInterfaceStringifier (Stringifier a)
+  | PartialInterfaceIterableDeclaration (IterableDeclaration a)
+  | PartialInterfaceAsyncIterableDeclaration (AsyncIterableDeclaration a)
+  | PartialInterfaceSetlikeDeclaration (SetlikeDeclaration a)
+  | PartialInterfaceMaplikeDeclaration (MaplikeDeclaration a)
   deriving (Show, Eq, Generic, Functor, Typeable)
 
 data CallbackInterfaceMember a = CallbackInterfaceConstant (Constant a) | CallbackInterfaceOperation (Operation a)
@@ -143,18 +154,25 @@ data DictionaryDefinition a = DictionaryDefinition
   }
   deriving (Show, Eq, Generic, Functor, Typeable)
 
+data PartialDictionaryDefinition a = PartialDictionaryDefinition
+  { ann     :: a
+  , name    :: Ident
+  , members :: [DictionaryMember a]
+  }
+  deriving (Show, Eq, Generic, Functor, Typeable)
+
 data DictionaryMember a
   = RequiredDictionaryMember {ann :: a, type' :: TypeName a, name :: Ident}
   | DictionaryMember {ann :: a, type' :: TypeName a, name :: Ident, defaultValue :: Maybe DefaultValue}
   deriving (Show, Eq, Generic, Functor, Typeable)
 
 data IterableDeclaration a
-  = ValueIteratorDeclaration { ann :: a, attributes :: ExtendedAttributeList a, value :: TypeWithExtendedAttributes a }
-  | PairIteratorDeclaration { ann :: a, attributes :: ExtendedAttributeList a, key :: TypeWithExtendedAttributes a, value :: TypeWithExtendedAttributes a }
+  = ValueIteratorDeclaration { ann :: a, attributes :: ExtendedAttributeList a, value :: TypeName a }
+  | PairIteratorDeclaration { ann :: a, attributes :: ExtendedAttributeList a, key :: TypeName a, value :: TypeName a }
   deriving (Show, Eq, Generic, Functor, Typeable)
 
 data AsyncIterableDeclaration a
-  = AsyncIterableDeclaration { ann :: a, attributes :: ExtendedAttributeList a, key :: TypeWithExtendedAttributes a, value :: TypeWithExtendedAttributes a }
+  = AsyncIterableDeclaration { ann :: a, attributes :: ExtendedAttributeList a, key :: TypeName a, value :: TypeName a }
   deriving (Show, Eq, Generic, Functor, Typeable)
 
 data Constant a = Constant
@@ -205,7 +223,7 @@ data Operation a = Operation
 data Getter a = Getter
   { ann        :: a
   , attributes :: ExtendedAttributeList a
-  , type'      :: TypeWithExtendedAttributes a
+  , type'      :: TypeName a
   , name       :: Maybe Ident
   , arguments  :: ArgumentList a
   }
@@ -214,7 +232,7 @@ data Getter a = Getter
 data Setter a = Setter
   { ann        :: a
   , attributes :: ExtendedAttributeList a
-  , type'      :: TypeWithExtendedAttributes a
+  , type'      :: TypeName a
   , name       :: Maybe Ident
   , arguments  :: ArgumentList a
   }
@@ -223,30 +241,31 @@ data Setter a = Setter
 data Deleter a = Deleter
   { ann        :: a
   , attributes :: ExtendedAttributeList a
-  , type'      :: TypeWithExtendedAttributes a
+  , type'      :: TypeName a
+  , name       :: Maybe Ident
   , arguments  :: ArgumentList a
   }
   deriving (Show, Eq, Generic, Functor, Typeable)
 
 data Stringifier a
-  = StringifierOperation { ann :: a, attributes :: ExtendedAttributeList a, type' :: TypeWithExtendedAttributes a, arguments :: ArgumentList a }
-  | StringifierAttribute { ann :: a, attributes :: ExtendedAttributeList a, type' :: TypeWithExtendedAttributes a, name :: Ident }
+  = StringifierOperation { ann :: a, attributes :: ExtendedAttributeList a, type' :: TypeName a, arguments :: ArgumentList a }
+  | StringifierAttribute { ann :: a, attributes :: ExtendedAttributeList a, type' :: TypeName a, name :: Ident }
   deriving (Show, Eq, Generic, Functor, Typeable)
 
 data SetlikeDeclaration a
-  = ReadWriteSetlikeDeclaration { ann :: a, type' :: TypeWithExtendedAttributes a }
-  | ReadOnlySetlikeDeclaration { ann :: a, type' :: TypeWithExtendedAttributes a }
+  = ReadWriteSetlikeDeclaration { ann :: a, type' :: TypeName a }
+  | ReadOnlySetlikeDeclaration { ann :: a, type' :: TypeName a }
   deriving (Show, Eq, Generic, Functor, Typeable)
 
 data MaplikeDeclaration a
-  = ReadWriteMaplikeDeclaration { ann :: a, keyType :: TypeWithExtendedAttributes a, valueType :: TypeWithExtendedAttributes a }
-  | ReadOnlyMaplikeDeclaration { ann :: a, keyType :: TypeWithExtendedAttributes a, valueType :: TypeWithExtendedAttributes a }
+  = ReadWriteMaplikeDeclaration { ann :: a, keyType :: TypeName a, valueType :: TypeName a }
+  | ReadOnlyMaplikeDeclaration { ann :: a, keyType :: TypeName a, valueType :: TypeName a }
   deriving (Show, Eq, Generic, Functor, Typeable)
 
 data Argument a
-  = RegularArgument { ann :: a, attributes :: ExtendedAttributeList a, type' :: TypeWithExtendedAttributes a, name :: Ident }
-  | OptionalArgument {ann :: a, attributes :: ExtendedAttributeList a, type' :: TypeWithExtendedAttributes a, name :: Ident, defaultValue :: (Maybe DefaultValue)}
-  | VariadicArgument {ann :: a, attributes :: ExtendedAttributeList a, type' :: TypeWithExtendedAttributes a, name :: Ident}
+  = RegularArgument { ann :: a, attributes :: ExtendedAttributeList a, typeName :: TypeName a, name :: Ident }
+  | OptionalArgument {ann :: a, attributes :: ExtendedAttributeList a, typeName' :: TypeName a, name :: Ident, defaultValue :: (Maybe DefaultValue)}
+  | VariadicArgument {ann :: a, attributes :: ExtendedAttributeList a, typeName' :: TypeName a, name :: Ident}
   deriving (Show, Eq, Generic, Functor, Typeable)
 
 data DefaultValue = DefaultConst ConstValue | DefaultString Text | DefaultDict | DefaultSeq | DefaultNull deriving (Show, Eq)
@@ -259,21 +278,15 @@ data ConstValue
 
 data Attribute a = Attribute
   { ann        :: a
+  , inherited  :: Bool
   , attributes :: ExtendedAttributeList a
-  , type'      :: TypeWithExtendedAttributes a
+  , type'      :: TypeName a
   , name       :: Ident
   , readonly   :: Bool
   }
   deriving (Show, Eq, Generic, Functor, Typeable)
 
 newtype Ident = Ident Text deriving (Show, Eq, Ord, Generic, Typeable)
-
-data TypeWithExtendedAttributes a = TypeWithExtendedAttributes
-  { ann        :: a
-  , attributes :: ExtendedAttributeList a
-  , inner      :: TypeName a
-  }
-  deriving (Show, Eq, Generic, Functor, Typeable)
 
 data TypeName a
   = AnyT a
@@ -298,8 +311,21 @@ data TypeName a
   | SymbolT a
   | InterfaceType a Ident
   | NullableT (TypeName a)
-  | SequenceT (TypeWithExtendedAttributes a)
-  | RecordT (TypeName a) (TypeWithExtendedAttributes a)
+  | SequenceT (TypeName a)
+  | RecordT (TypeName a) (TypeName a)
   | PromiseT (TypeName a)
-  | UnionT [TypeWithExtendedAttributes a]
+  | FrozenArrayT (TypeName a)
+  | ArrayBufferT a
+  | DataViewT a
+  | Int8ArrayT a
+  | Int16ArrayT a
+  | Int32ArrayT a
+  | Uint8ArrayT a
+  | Uint16ArrayT a
+  | Uint32ArrayT a
+  | Uint8ClampedArrayT a
+  | Float32ArrayT a
+  | Float64ArrayT a
+  | UnionT [TypeName a]
+  | AnnotatedType a (ExtendedAttributeList a) (TypeName a)
   deriving (Show, Eq, Functor, Generic, Typeable)

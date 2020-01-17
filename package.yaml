@@ -68,14 +68,11 @@ dependencies:
 - megaparsec
 - parser-combinators
 - text
-- prettyprinter
 - scientific
 - pretty-show
-- prelude-extras
-- dependent-sum
 - containers
-- generics-sop
 - ieee754
+- template-haskell
 
 library:
   source-dirs: src

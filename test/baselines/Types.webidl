@@ -1,3 +1,3 @@
 interface Foo {
-    attribute unsigned shortz;
+    attribute unsigned short z;
 };

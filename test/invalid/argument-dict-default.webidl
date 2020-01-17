@@ -10,6 +10,8 @@ typedef (short or Dict) Union;
 
 [Exposed=Window]
 interface X {
+  // This is invalid because the Union type's flattened members contains a dict with no required properties,
+  // so the argument must have a default value present
   constructor(optional Union union);
   void x(optional Dict dict);
   void x2(optional Dict dict = {});

@@ -1,7 +1,7 @@
 module Language.WebIDL.Parser where
 
-import Language.WebIDL.Parser.Types
-import qualified Language.WebIDL.Parser.Lex as L
+import           Language.WebIDL.Parser.Types
+import qualified Language.WebIDL.Parser.Lex    as L
 
 import           Data.Functor                   ( ($>)
                                                 , void
@@ -13,20 +13,40 @@ import qualified Data.Set                      as Set
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import           Data.Void
+import           Control.Monad                  ( guard )
 import           Language.WebIDL.AST
 import           Text.Megaparsec
 import           Text.Megaparsec.Char
 import           Text.Megaparsec.Debug          ( dbg )
-import           Data.Char                      ( isLetter, isDigit )
+import           Data.Char                      ( isLetter
+                                                , isDigit
+                                                )
 import           Numeric.IEEE
 
+-- Parses the @Definitions@ nonterminal symbol
+pFragment :: HParser Fragment
+pFragment = L.sc *> (Fragment <$> getSourcePos <*> some pDefn) <* hidden eof
+
+-- Parses the @Definition@ nonterminal symbol
+pDefn :: HParser Definition
+pDefn = choice
+  [ Dictionary <$> pDictionary
+  , PartialDictionary <$> pPartialDictionary
+  , Typedef <$> pTypedef
+  , Enum <$> pEnum
+  , CallbackInterface <$> try pCallbackInterface
+  , Callback <$> try pCallbackDefinition
+  , PartialMixin <$> pPartialMixin
+  , Mixin <$> pMixin
+  , PartialInterface <$> try pPartialInterface
+  , Interface <$> try pInterface
+  , PartialNamespace <$> (L.term "partial" *> pNamespace)
+  , Namespace <$> pNamespace
+  , IncludesStatement <$> pIncludesStatement
+  ]
+
 pIdent :: Parser Ident
-pIdent = label "identifier" $ L.lexeme $ Ident <$> p
-  where
-    p :: Parser Text
-    p = fst <$> match (optional (char '_' <|> char '-') *> asciiLetter *> many (asciiLetter <|> digit <|> char '_' <|> char '-'))
-    asciiLetter = satisfy isLetter
-    digit = satisfy isDigit
+pIdent = Ident <$> L.identifier
 
 pExtendedAttributeList :: HParser ExtendedAttributeList
 pExtendedAttributeList =
@@ -45,7 +65,8 @@ pExtendedAttributeArgList =
 
 pExtendedAttributeIdentList :: HParser ExtendedAttribute
 pExtendedAttributeIdentList =
-  ExtendedAttributeIdentList <$> pIdent <* L.eq <*> L.parens (sepBy1 pIdent L.comma)
+  ExtendedAttributeIdentList <$> pIdent <* L.eq <*> L.parens
+    (sepBy1 pIdent L.comma)
 
 pExtendedAttributeNamedArgList :: HParser ExtendedAttribute
 pExtendedAttributeNamedArgList = do
@@ -67,7 +88,7 @@ pInterface :: HParser InterfaceDefinition
 pInterface = stmt $ do
   pos        <- getSourcePos
   attributes <- hidden pExtendedAttributeList
-  _          <- try $ L.keyword "interface"
+  _          <- try $ L.term "interface"
   name       <- pIdent
   parent     <- optional $ L.colon *> pIdent
   members    <- L.braces $ many pInterfaceMember
@@ -76,84 +97,111 @@ pInterface = stmt $ do
 pInterfaceMember :: HParser InterfaceMember
 pInterfaceMember = do
   choice
-    [ L.keyword "static" *> pStaticMember
+    [ L.term "static" *> pStaticMember
     , InterfaceSetlikeDeclaration <$> pSetlikeDeclaration
     , InterfaceMaplikeDeclaration <$> pMaplikeDeclaration
-    , InterfaceAsyncIterableDeclaration <$> try pAsyncIterableDeclaration 
+    , InterfaceAsyncIterableDeclaration <$> try pAsyncIterableDeclaration
     , InterfaceIterableDeclaration <$> try pIterableDeclaration
     , InterfaceStringifier <$> try pStringifier
     , InterfaceGetter <$> try pGetter
+    , InterfaceSetter <$> try pSetter
+    , InterfaceDeleter <$> try pDeleter
     , InterfaceConstructor <$> try pConstructor
     , InterfaceAttribute <$> pAttribute
     , InterfaceConstant <$> pConstant
     , InterfaceOperation <$> pOperation
     ]
-  where
-    pStaticMember = InterfaceStaticAttribute <$> pAttribute <|> InterfaceStaticOperation <$> pOperation
+ where
+  pStaticMember =
+    InterfaceStaticAttribute
+      <$> pAttribute
+      <|> InterfaceStaticOperation
+      <$> pOperation
 
 pSetlikeDeclaration :: HParser SetlikeDeclaration
 pSetlikeDeclaration = stmt $ do
-  pos <- getSourcePos
-  variant <- try $ toConstructor <$> modifier (L.keyword "readonly") <* L.keyword "setlike"
-  tn <- L.carets pTypeWithExtendedAttributes
+  pos     <- getSourcePos
+  variant <- try $ toConstructor <$> modifier (L.term "readonly") <* L.term
+    "setlike"
+  tn <- L.carets pAnnotatedType
   pure $ variant pos tn
-  where
-    toConstructor True = ReadOnlySetlikeDeclaration
-    toConstructor False = ReadWriteSetlikeDeclaration
+ where
+  toConstructor True  = ReadOnlySetlikeDeclaration
+  toConstructor False = ReadWriteSetlikeDeclaration
 
 pMaplikeDeclaration :: HParser MaplikeDeclaration
 pMaplikeDeclaration = stmt $ do
-  pos <- getSourcePos
-  variant <- try $ toConstructor <$> modifier (L.keyword "readonly") <* L.keyword "maplike"
+  pos     <- getSourcePos
+  variant <- try $ toConstructor <$> modifier (L.term "readonly") <* L.term
+    "maplike"
   L.carets $ do
-    keyType <- pTypeWithExtendedAttributes
-    _ <- L.comma
-    valueType <- pTypeWithExtendedAttributes
+    keyType   <- pAnnotatedType
+    _         <- L.comma
+    valueType <- pAnnotatedType
     pure $ variant pos keyType valueType
-  where
-    toConstructor True = ReadOnlyMaplikeDeclaration
-    toConstructor False = ReadWriteMaplikeDeclaration
+ where
+  toConstructor True  = ReadOnlyMaplikeDeclaration
+  toConstructor False = ReadWriteMaplikeDeclaration
 
 
 pAsyncIterableDeclaration :: HParser AsyncIterableDeclaration
 pAsyncIterableDeclaration = stmt $ do
   pos        <- getSourcePos
   attributes <- hidden pExtendedAttributeList
-  _          <- L.keyword "async" *> L.keyword "iterable"
+  _          <- L.term "async" *> L.term "iterable"
   L.carets $ do
-    key      <- pTypeWithExtendedAttributes
-    _        <- L.comma
-    value    <- pTypeWithExtendedAttributes
+    key   <- pAnnotatedType
+    _     <- L.comma
+    value <- pAnnotatedType
     pure $ AsyncIterableDeclaration { ann = pos, attributes, key, value }
 
 pIterableDeclaration :: HParser IterableDeclaration
 pIterableDeclaration = stmt $ do
   pos   <- getSourcePos
   attrs <- hidden pExtendedAttributeList
-  _     <- L.keyword "iterable"
+  _     <- L.term "iterable"
   let pPair =
         PairIteratorDeclaration pos attrs
-          <$> pTypeWithExtendedAttributes
+          <$> pAnnotatedType
           <*  L.comma
-          <*> pTypeWithExtendedAttributes
+          <*> pAnnotatedType
   let pValue =
-        ValueIteratorDeclaration pos attrs <$> pTypeWithExtendedAttributes
+        ValueIteratorDeclaration pos attrs <$> pAnnotatedType
   L.carets $ try pPair <|> pValue
 
 pPartialInterface :: HParser PartialInterfaceDefinition
 pPartialInterface = stmt $ do
   pos        <- getSourcePos
   attributes <- hidden pExtendedAttributeList
-  _          <- try $ L.keyword "partial" *> L.keyword "interface"
+  _          <- try $ L.term "partial" *> L.term "interface"
   name       <- pIdent
-  members    <- L.braces (many pMember)
+  members    <- L.braces (many pPartialInterfaceMember)
   pure $ PartialInterfaceDefinition { ann = pos, attributes, name, members }
+
+
+pPartialInterfaceMember :: HParser PartialInterfaceMember
+pPartialInterfaceMember = do
+  choice
+    [ L.term "static" *> pStaticMember
+    , PartialInterfaceSetlikeDeclaration <$> pSetlikeDeclaration
+    , PartialInterfaceMaplikeDeclaration <$> pMaplikeDeclaration
+    , PartialInterfaceAsyncIterableDeclaration <$> try pAsyncIterableDeclaration
+    , PartialInterfaceIterableDeclaration <$> try pIterableDeclaration
+    , PartialInterfaceStringifier <$> try pStringifier
+    , PartialInterfaceGetter <$> try pGetter
+    , PartialInterfaceSetter <$> try pSetter
+    , PartialInterfaceDeleter <$> try pDeleter
+    , PartialInterfaceAttribute <$> pAttribute
+    , PartialInterfaceConstant <$> pConstant
+    , PartialInterfaceOperation <$> pOperation
+    ]
  where
-  pMember :: HParser PartialInterfaceMember
-  pMember =
-    (PartialInterfaceAttribute <$> try pAttribute)
-      <|> (PartialInterfaceConstant <$> pConstant)
-      <|> (PartialInterfaceOperation <$> pOperation)
+  pStaticMember =
+    PartialInterfaceStaticAttribute
+      <$> pAttribute
+      <|> PartialInterfaceStaticOperation
+      <$> pOperation
+
 
 stmt :: Parser a -> Parser a
 stmt p = p <* L.semi
@@ -162,7 +210,7 @@ pCallbackInterface :: HParser CallbackInterfaceDefinition
 pCallbackInterface = stmt $ do
   pos        <- getSourcePos
   attributes <- hidden pExtendedAttributeList
-  _          <- try $ L.keyword "callback" *> L.keyword "interface"
+  _          <- try $ L.term "callback" *> L.term "interface"
   name       <- pIdent
   members    <- L.braces (many pMember)
   pure $ CallbackInterfaceDefinition { ann = pos, attributes, name, members }
@@ -175,7 +223,7 @@ pCallbackInterface = stmt $ do
 pPartialMixin :: HParser MixinDefinition
 pPartialMixin = stmt $ do
   pos     <- getSourcePos
-  _       <- try $ L.keyword "partial" *> L.keyword "interface" *> L.keyword "mixin"
+  _       <- try $ L.term "partial" *> L.term "interface" *> L.term "mixin"
   name    <- pIdent
   members <- L.braces $ many pMixinMember
   pure $ MixinDefinition { ann = pos, name, members }
@@ -183,20 +231,22 @@ pPartialMixin = stmt $ do
 pMixin :: HParser MixinDefinition
 pMixin = stmt $ do
   pos     <- getSourcePos
-  _       <- try $ L.keyword "interface" *> L.keyword "mixin"
+  _       <- try $ L.term "interface" *> L.term "mixin"
   name    <- pIdent
   members <- L.braces $ many pMixinMember
   pure $ MixinDefinition { ann = pos, name, members }
 
 pMixinMember :: HParser MixinMember
 pMixinMember =
-  (MixinAttribute <$> try pAttribute) <|> (MixinConstant <$> pConstant) <|> (MixinOperation <$> pOperation)
+  (MixinAttribute <$> try pAttribute)
+    <|> (MixinConstant <$> pConstant)
+    <|> (MixinOperation <$> pOperation)
 
 pConstructor :: HParser Constructor
 pConstructor = stmt $ do
   pos        <- getSourcePos
   attributes <- pExtendedAttributeList
-  _          <- L.keyword "constructor"
+  _          <- L.term "constructor"
   arguments  <- pArgumentList
   pure $ Constructor { ann = pos, attributes, arguments }
 
@@ -204,19 +254,19 @@ pNamespace :: HParser NamespaceDefinition
 pNamespace = stmt $ do
   pos        <- getSourcePos
   attributes <- hidden pExtendedAttributeList
-  _          <- try $ L.keyword "namespace"
+  _          <- try $ L.term "namespace"
   name       <- pIdent
   members    <- L.braces $ many pNamespaceMember
   pure $ NamespaceDefinition { ann = pos, attributes, name, members }
 
 pNamespaceMember :: HParser NamespaceMember
 pNamespaceMember =
-  (NamespaceAttribute <$> pAttribute) <|> (NamespaceOperation <$> pOperation) 
+  (NamespaceAttribute <$> pAttribute) <|> (NamespaceOperation <$> pOperation)
 
 pEnum :: HParser EnumDefinition
 pEnum = stmt $ do
   pos    <- getSourcePos
-  _      <- try $ L.keyword "enum"
+  _      <- try $ L.term "enum"
   name   <- pIdent
   values <- L.braces $ sepEndBy1 pStringLiteral L.comma
   pure $ EnumDefinition { ann = pos, name, values }
@@ -224,31 +274,41 @@ pEnum = stmt $ do
 pTypedef :: HParser TypedefDefinition
 pTypedef = stmt $ do
   pos   <- getSourcePos
-  _     <- try $ L.keyword "typedef"
-  type' <- pTypeWithExtendedAttributes
+  _     <- try $ L.term "typedef"
+  type' <- pAnnotatedType
   name  <- pIdent
   pure $ TypedefDefinition { ann = pos, name, type' }
 
 pDictionary :: HParser DictionaryDefinition
 pDictionary = stmt $ do
   pos     <- getSourcePos
-  _       <- try $ L.keyword "dictionary"
+  _       <- try $ L.term "dictionary"
   name    <- pIdent
   parent  <- optional $ L.colon *> pIdent
-  members <- L.braces $ many pMember
+  members <- L.braces $ many pDictionaryMember
   pure $ DictionaryDefinition { ann = pos, name, parent, members }
+
+pPartialDictionary :: HParser PartialDictionaryDefinition
+pPartialDictionary = stmt $ do
+  pos     <- getSourcePos
+  _       <- try $ L.term "partial" *> L.term "dictionary"
+  name    <- pIdent
+  members <- L.braces $ many pDictionaryMember
+  pure $ PartialDictionaryDefinition { ann = pos, name, members }
+
+
+pDictionaryMember :: HParser DictionaryMember
+pDictionaryMember = pRequiredMember <|> pOptionalMember
  where
-  pMember :: HParser DictionaryMember
-  pMember         = pRequiredMember <|> pOptionalMember
   pRequiredMember = stmt $ do
     pos   <- getSourcePos
-    _     <- L.keyword "required"
-    type' <- pType
+    _     <- L.term "required"
+    type' <- pNullableType
     name  <- pIdent
     pure $ RequiredDictionaryMember { ann = pos, type', name }
   pOptionalMember = stmt $ do
     pos          <- getSourcePos
-    type'        <- pType
+    type'        <- pNullableType
     name         <- pIdent
     defaultValue <- optional (L.sym "=" *> pDefaultValue)
     pure $ DictionaryMember { ann = pos, type', name, defaultValue }
@@ -257,32 +317,33 @@ pConstant :: HParser Constant
 pConstant = stmt $ do
   pos   <- getSourcePos
   _     <- L.sym "const"
-  ty    <- pNullableType
+  ty    <- pType
   ident <- pIdent
   _     <- L.sym "="
   value <- pConstValue
   pure $ Constant pos ty ident value
 
-prim :: Text -> (forall a. a -> TypeName a) -> HParser TypeName
-prim tn f = f <$> getSourcePos <* L.sym tn
+prim :: Text -> (forall a . a -> TypeName a) -> HParser TypeName
+prim tn f = f <$> getSourcePos <* L.term tn
 
 integerType :: HParser TypeName
 integerType =
   prim "unsigned long long" ULongLongT
-    <|> prim "long long" LongLongT
-    <|> prim "unsigned long" ULongT
+    <|> prim "long long"      LongLongT
+    <|> prim "long"           LongT
+    <|> prim "unsigned long"  ULongT
     <|> prim "unsigned short" UShortT
-    <|> prim "short" ShortT
-    <|> prim "octet" OctetT
-    <|> prim "byte" ByteT
+    <|> prim "short"          ShortT
+    <|> prim "octet"          OctetT
+    <|> prim "byte"           ByteT
 
 numericType :: HParser TypeName
 numericType =
   integerType
-    <|> prim "unrestricted float" UnrestrictedFloatT
+    <|> prim "unrestricted float"  UnrestrictedFloatT
     <|> prim "unrestricted double" UnrestrictedDoubleT
-    <|> prim "float" FloatT
-    <|> prim "double" DoubleT
+    <|> prim "float"               FloatT
+    <|> prim "double"              DoubleT
 
 primitiveType :: HParser TypeName
 primitiveType = numericType <|> prim "boolean" BooleanT
@@ -290,20 +351,26 @@ primitiveType = numericType <|> prim "boolean" BooleanT
 stringType :: HParser TypeName
 stringType =
   prim "DOMString" DOMStringT
-    <|> prim "USVString" USVStringT
+    <|> prim "USVString"  USVStringT
     <|> prim "ByteString" ByteStringT
 
 pAnyType :: HParser TypeName
-pAnyType = prim "any" AnyT
+pAnyType = prim "any" AnyT <* notFollowedBy (L.term "?")
 
 pVoidType :: HParser TypeName
 pVoidType = prim "void" VoidT
 
+pObjectType :: HParser TypeName
+pObjectType = prim "object" ObjectT
+
 pInterfaceType :: HParser TypeName
 pInterfaceType = InterfaceType <$> getSourcePos <*> pIdent
 
+nonNullable :: HParser TypeName -> HParser TypeName
+nonNullable p = p <* notFollowedBy (L.term "?")
+
 pPromiseType :: HParser TypeName
-pPromiseType = pGenericType1 "Promise" PromiseT
+pPromiseType = nonNullable $ pGenericType1 "Promise" PromiseT
 
 pSequenceType :: HParser TypeName
 pSequenceType = pGenericType1' "sequence" SequenceT
@@ -316,42 +383,86 @@ pType =
     <|> pPromiseType
     <|> pRecordType
     <|> pSequenceType
-    <|> pInterfaceType
+    <|> pObjectType
     <|> pAnyType
+    <|> pInterfaceType
 
 pNullableType :: HParser TypeName
 pNullableType = try ((NullableT <$> pType) <* L.sym "?") <|> pType
 
-pTypeWithExtendedAttributes :: HParser TypeWithExtendedAttributes
-pTypeWithExtendedAttributes = pTypeWithExtendedAttributes' pNullableType
+pAnnotatedType :: HParser TypeName
+pAnnotatedType = pAnnotatedType' pNullableType
 
-pTypeWithExtendedAttributes'
-  :: HParser TypeName -> HParser TypeWithExtendedAttributes
-pTypeWithExtendedAttributes' pInner = do
+pAnnotatedType'
+  :: HParser TypeName -> HParser TypeName
+pAnnotatedType' pInner = do
   pos        <- getSourcePos
   attributes <- hidden pExtendedAttributeList
   inner      <- pInner
-  pure $ TypeWithExtendedAttributes { ann = pos, attributes, inner }
+  pure $ AnnotatedType pos attributes inner
 
-pGenericType1 :: Text -> (forall a. TypeName a -> TypeName a) -> HParser TypeName
+pGenericType1
+  :: Text -> (forall a . TypeName a -> TypeName a) -> HParser TypeName
 pGenericType1 tn f = f <$> (L.sym tn *> L.carets pNullableType)
 
-pGenericType1' :: Text -> (forall a. TypeWithExtendedAttributes a -> TypeName a) -> HParser TypeName
-pGenericType1' tn f = f <$> (L.sym tn *> L.carets pTypeWithExtendedAttributes)
+pGenericType1'
+  :: Text
+  -> (forall a . TypeName a -> TypeName a)
+  -> HParser TypeName
+pGenericType1' tn f = f <$> (L.sym tn *> L.carets pAnnotatedType)
 
 sepBy2 :: Parser a -> Parser sep -> Parser [a]
 sepBy2 p sep = (:) <$> p <* sep <*> sepBy1 p sep
 
+nullable :: HParser TypeName -> HParser TypeName
+nullable p = do
+  inner  <- p
+  isNull <- modifier (L.term "?")
+  pure $ if isNull then NullableT inner else inner
+
+pSymbolType :: HParser TypeName
+pSymbolType = prim "symbol" SymbolT
+
+pFrozenArrayType :: HParser TypeName
+pFrozenArrayType = pGenericType1' "FrozenArray" FrozenArrayT
+
+pBufferRelatedType :: HParser TypeName
+pBufferRelatedType =
+  prim "ArrayBuffer" ArrayBufferT
+    <|> prim "DataView"          DataViewT
+    <|> prim "Int8Array"         Int8ArrayT
+    <|> prim "Int16Array"        Int16ArrayT
+    <|> prim "Int32Array"        Int32ArrayT
+    <|> prim "Uint8Array"        Uint8ArrayT
+    <|> prim "Uint16Array"       Uint16ArrayT
+    <|> prim "Uint32Array"       Uint32ArrayT
+    <|> prim "Uint8ClampedArray" Uint8ClampedArrayT
+    <|> prim "Float32Array"      Float32ArrayT
+    <|> prim "Float64Array"      Float64ArrayT
+
+pDistinguishableType :: HParser TypeName
+pDistinguishableType =
+  nullable
+    $   primitiveType
+    <|> stringType
+    <|> pInterfaceType
+    <|> pSequenceType
+    <|> pObjectType
+    <|> pSymbolType
+    <|> pBufferRelatedType
+    <|> pFrozenArrayType
+    <|> pRecordType
+
 pUnionType :: HParser TypeName
-pUnionType = UnionT <$> L.parens (sepBy2 pTypeWithExtendedAttributes (L.keyword "or"))
+pUnionType = UnionT <$> L.parens (sepBy2 ((pAnnotatedType' pDistinguishableType) <|> nullable pUnionType) (L.term "or")) 
 
 pRecordType :: HParser TypeName
 pRecordType = do
-  _ <- L.keyword "record"
+  _ <- L.term "record"
   L.carets $ do
-    keyType <- stringType
-    _ <- L.comma
-    valueType <- pTypeWithExtendedAttributes
+    keyType   <- stringType
+    _         <- L.comma
+    valueType <- pAnnotatedType
     pure $ RecordT keyType valueType
 
 
@@ -359,29 +470,49 @@ pGetter :: HParser Getter
 pGetter = stmt $ do
   pos        <- getSourcePos
   attributes <- pExtendedAttributeList
-  _          <- L.keyword "getter"
-  type'      <- pTypeWithExtendedAttributes
+  _          <- L.term "getter"
+  type'      <- pAnnotatedType
   name       <- optional pIdent
   arguments  <- pArgumentList
   pure $ Getter { ann = pos, attributes, type', name, arguments }
+
+pSetter :: HParser Setter
+pSetter = stmt $ do
+  pos        <- getSourcePos
+  attributes <- pExtendedAttributeList
+  _          <- L.term "setter"
+  type'      <- pAnnotatedType
+  name       <- optional pIdent
+  arguments  <- pArgumentList
+  pure $ Setter { ann = pos, attributes, type', name, arguments }
+
+pDeleter :: HParser Deleter
+pDeleter = stmt $ do
+  pos        <- getSourcePos
+  attributes <- pExtendedAttributeList
+  _          <- L.term "deleter"
+  type'      <- pAnnotatedType
+  name       <- optional pIdent
+  arguments  <- pArgumentList
+  pure $ Deleter { ann = pos, attributes, type', name, arguments }
 
 pStringifier :: HParser Stringifier
 pStringifier = stmt $ do
   pos   <- getSourcePos
   attrs <- pExtendedAttributeList
-  _     <- L.keyword "stringifier"
+  _     <- L.term "stringifier"
   let pStringifierAttribute =
         StringifierAttribute pos attrs
-          <$> (L.keyword "attribute" *> pTypeWithExtendedAttributes)
+          <$> (L.term "attribute" *> pAnnotatedType)
           <*> pIdent
   let pStringifierOperation = do
-        returnType <- pTypeWithExtendedAttributes
+        returnType <- pAnnotatedType
         arguments  <- pArgumentList
         pure $ StringifierOperation pos attrs returnType arguments
   let pShorthand = pure $ StringifierOperation
         pos
         attrs
-        (TypeWithExtendedAttributes pos mempty (DOMStringT pos))
+        (AnnotatedType pos mempty (DOMStringT pos))
         mempty
   pStringifierAttribute <|> pStringifierOperation <|> pShorthand
 
@@ -392,18 +523,29 @@ pAttribute :: HParser Attribute
 pAttribute = stmt $ try $ do
   pos        <- getSourcePos
   attributes <- hidden pExtendedAttributeList
-  readonly   <- modifier $ L.keyword "readonly"
-  _          <- L.keyword "attribute"
-  ty         <- pTypeWithExtendedAttributes
-  ident      <- pIdent
-  pure $ Attribute { attributes, ann = pos, type' = ty, name = ident, readonly }
+  inherited  <- modifier $ L.term "inherit"
+  -- An attribute can be marked readonly only if it is not inherited
+  readonly   <- if inherited then pure False else modifier $ L.term "readonly"
+  _          <- L.term "attribute"
+  ty         <- pAnnotatedType
+  ident      <- pAttributeName
+  pure $ Attribute { attributes
+                   , inherited
+                   , ann        = pos
+                   , type'      = ty
+                   , name       = ident
+                   , readonly
+                   }
+
+pAttributeName :: Parser Ident
+pAttributeName = Ident <$> L.attributeName
 
 pOperation :: HParser Operation
 pOperation = stmt $ do
   pos          <- getSourcePos
   attributes   <- hidden pExtendedAttributeList
   ty           <- pReturnType
-  ident        <- pIdent
+  ident        <- pOperationName
   argumentList <- pArgumentList
   pure $ Operation { ann        = pos
                    , attributes
@@ -412,6 +554,9 @@ pOperation = stmt $ do
                    , arguments  = argumentList
                    }
   where pReturnType = pVoidType <|> pNullableType
+
+pOperationName :: Parser Ident
+pOperationName = Ident <$> L.operationName
 
 pConstValue :: Parser ConstValue
 pConstValue =
@@ -427,13 +572,17 @@ pIntegerLiteral :: Parser Int
 pIntegerLiteral = try $ L.decimal <* notFollowedBy L.dot
 
 pInfinity :: Parser Float
-pInfinity = L.signed $ infinity <$ L.keyword "Infinity"
+pInfinity = L.signed $ infinity <$ L.term "Infinity"
 
 pNaN :: Parser Float
-pNaN = nan <$ L.keyword "NaN"
+pNaN = nan <$ L.term "NaN"
 
 pFloatLiteral :: Parser Float
-pFloatLiteral = try pNaN <|> try pInfinity <|> Scientific.toRealFloat <$> L.signed L.scientific
+pFloatLiteral =
+  try pNaN
+    <|> try pInfinity
+    <|> Scientific.toRealFloat
+    <$> L.signed L.scientific
 
 pStringLiteral :: Parser Text
 pStringLiteral = L.lexeme $ char '"' *> takeWhileP Nothing (/= '"') <* char '"'
@@ -447,8 +596,8 @@ pDefaultValue :: Parser DefaultValue
 pDefaultValue =
   (DefaultNull <$ L.sym "null")
     <|> (DefaultConst <$> pConstValue)
-    <|> (DefaultDict <$ L.braces L.ws)
-    <|> (DefaultSeq <$ L.brackets L.ws)
+    <|> (DefaultDict <$ L.braces L.sc)
+    <|> (DefaultSeq <$ L.brackets L.sc)
     <|> (DefaultString <$> pStringLiteral)
 
 pOptionalArgument :: HParser Argument
@@ -456,23 +605,33 @@ pOptionalArgument = do
   pos          <- getSourcePos
   attributes   <- hidden pExtendedAttributeList
   _            <- L.sym "optional"
-  ty           <- pTypeWithExtendedAttributes
+  ty           <- pAnnotatedType
   ident        <- pIdent
   defaultValue <- optional (L.sym "=" *> pDefaultValue)
-  pure $ OptionalArgument { ann = pos, attributes, type' = ty, name = ident, defaultValue }
+  pure $ OptionalArgument { ann          = pos
+                          , attributes
+                          , typeName'    = ty
+                          , name         = ident
+                          , defaultValue
+                          }
 
 pVariadicArgument :: HParser Argument
 pVariadicArgument = do
-  pos   <- getSourcePos
+  pos        <- getSourcePos
   attributes <- hidden pExtendedAttributeList
-  ty    <- pTypeWithExtendedAttributes
-  _     <- L.sym "..."
-  ident <- pIdent
-  pure $ VariadicArgument { ann = pos, attributes, type' = ty, name = ident }
+  ty         <- pAnnotatedType
+  _          <- L.sym "..."
+  ident      <- pArgumentName
+  pure
+    $ VariadicArgument { ann = pos, attributes, typeName' = ty, name = ident }
 
 pRegularArgument :: HParser Argument
 pRegularArgument =
-  (flip RegularArgument) <$> hidden pExtendedAttributeList <*> getSourcePos <*> pTypeWithExtendedAttributes <*> pIdent
+  (flip RegularArgument)
+    <$> hidden pExtendedAttributeList
+    <*> getSourcePos
+    <*> pNullableType
+    <*> pArgumentName
 
 pArgumentList :: HParser ArgumentList
 pArgumentList = L.parens $ ArgumentList <$> sepBy pArgument L.comma
@@ -481,11 +640,14 @@ pArgument :: HParser Argument
 pArgument =
   try pOptionalArgument <|> try pVariadicArgument <|> pRegularArgument
 
+pArgumentName :: Parser Ident
+pArgumentName = Ident <$> L.argumentName
+
 pIncludesStatement :: HParser IncludesStatementDefinition
 pIncludesStatement = stmt $ do
   pos       <- getSourcePos
   interface <- pIdent
-  _         <- L.keyword "includes"
+  _         <- L.term "includes"
   mixin     <- pIdent
   pure $ IncludesStatementDefinition { ann = pos, interface, mixin }
 
@@ -493,7 +655,7 @@ pCallbackDefinition :: HParser CallbackDefinition
 pCallbackDefinition = stmt $ do
   pos        <- getSourcePos
   attributes <- pExtendedAttributeList
-  _          <- L.keyword "callback"
+  _          <- L.term "callback"
   name       <- pIdent
   _          <- L.eq
   returnType <- pType
@@ -504,22 +666,3 @@ pCallbackDefinition = stmt $ do
                             , returnType
                             , arguments
                             }
-
-pDefn :: HParser Definition
-pDefn = choice
-  [ Dictionary <$> pDictionary
-  , Typedef <$> pTypedef
-  , Enum <$> pEnum
-  , CallbackInterface <$> try pCallbackInterface
-  , Callback <$> try pCallbackDefinition
-  , PartialMixin <$> pPartialMixin
-  , Mixin <$> pMixin
-  , PartialInterface <$> try pPartialInterface
-  , Interface <$> try pInterface
-  , PartialNamespace <$> (L.keyword "partial" *> pNamespace)
-  , Namespace <$> pNamespace
-  , IncludesStatement <$> pIncludesStatement
-  ]
-
-pFragment :: HParser Fragment
-pFragment = L.ws *> (Fragment <$> getSourcePos <*> some pDefn) <* hidden eof
