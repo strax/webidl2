@@ -11,7 +11,7 @@ import           Data.Text                      ( Text )
 import           GHC.Generics                   ( Generic )
 
 data Fragment a = Fragment a [Definition a]
-  deriving (Show, Eq)
+  deriving (Show, Eq, Generic, Functor, Typeable)
 
 data Definition a
   = Typedef (TypedefDefinition a)
