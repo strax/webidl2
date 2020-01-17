@@ -1,3 +1,5 @@
+{-# LANGUAGE LiberalTypeSynonyms #-}
+
 module Language.WebIDL.Parser where
 
 import           Language.WebIDL.Parser.Types
@@ -49,9 +51,7 @@ pIdent :: Parser Ident
 pIdent = Ident <$> L.identifier
 
 pExtendedAttributeList :: HParser ExtendedAttributeList
-pExtendedAttributeList =
-  ExtendedAttributeList
-    <$> (option [] $ L.brackets (sepBy1 pExtendedAttribute L.comma))
+pExtendedAttributeList = (option [] $ L.brackets (sepBy1 pExtendedAttribute L.comma))
 
 pExtendedAttributeNoArgs :: HParser ExtendedAttribute
 pExtendedAttributeNoArgs = ExtendedAttributeNoArgs <$> pIdent
@@ -634,7 +634,7 @@ pRegularArgument =
     <*> pArgumentName
 
 pArgumentList :: HParser ArgumentList
-pArgumentList = L.parens $ ArgumentList <$> sepBy pArgument L.comma
+pArgumentList = L.parens $ sepBy pArgument L.comma
 
 pArgument :: HParser Argument
 pArgument =

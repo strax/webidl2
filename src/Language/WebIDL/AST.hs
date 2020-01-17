@@ -183,18 +183,8 @@ data Constant a = Constant
   }
   deriving (Show, Eq, Generic, Functor, Typeable)
 
-newtype ExtendedAttributeList a = ExtendedAttributeList [ExtendedAttribute a]
-  deriving (Show, Eq, Functor, Typeable)
-
-deriving newtype instance Semigroup (ExtendedAttributeList a)
-deriving newtype instance Monoid (ExtendedAttributeList a)
-
-newtype ArgumentList a = ArgumentList [Argument a]
-  deriving (Show, Eq, Generic, Functor, Typeable)
-
-
-deriving newtype instance Semigroup (ArgumentList a)
-deriving newtype instance Monoid (ArgumentList a)
+type ExtendedAttributeList a = [ExtendedAttribute a]
+type ArgumentList a = [Argument a]
 
 data Constructor a = Constructor
   { attributes :: ExtendedAttributeList a
@@ -287,6 +277,9 @@ data Attribute a = Attribute
   deriving (Show, Eq, Generic, Functor, Typeable)
 
 newtype Ident = Ident Text deriving (Show, Eq, Ord, Generic, Typeable)
+
+unIdent :: Ident -> Text
+unIdent (Ident ident) = ident
 
 data TypeName a
   = AnyT a
