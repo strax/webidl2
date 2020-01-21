@@ -5,24 +5,11 @@ module Language.WebIDL.Parser where
 import           Language.WebIDL.Parser.Types
 import qualified Language.WebIDL.Parser.Lex    as L
 
-import           Data.Functor                   ( ($>)
-                                                , void
-                                                )
-import           Data.Kind                      ( Type )
-import           Data.Scientific                ( Scientific )
 import qualified Data.Scientific               as Scientific
-import qualified Data.Set                      as Set
 import           Data.Text                      ( Text )
-import qualified Data.Text                     as T
-import           Data.Void
-import           Control.Monad                  ( guard )
 import           Language.WebIDL.AST
 import           Text.Megaparsec
 import           Text.Megaparsec.Char
-import           Text.Megaparsec.Debug          ( dbg )
-import           Data.Char                      ( isLetter
-                                                , isDigit
-                                                )
 import           Numeric.IEEE
 
 -- Parses the @Definitions@ nonterminal symbol
@@ -51,7 +38,8 @@ pIdent :: Parser Ident
 pIdent = Ident <$> L.identifier
 
 pExtendedAttributeList :: HParser ExtendedAttributeList
-pExtendedAttributeList = (option [] $ L.brackets (sepBy1 pExtendedAttribute L.comma))
+pExtendedAttributeList =
+  (option [] $ L.brackets (sepBy1 pExtendedAttribute L.comma))
 
 pExtendedAttributeNoArgs :: HParser ExtendedAttribute
 pExtendedAttributeNoArgs = ExtendedAttributeNoArgs <$> pIdent
@@ -165,8 +153,7 @@ pIterableDeclaration = stmt $ do
           <$> pAnnotatedType
           <*  L.comma
           <*> pAnnotatedType
-  let pValue =
-        ValueIteratorDeclaration pos attrs <$> pAnnotatedType
+  let pValue = ValueIteratorDeclaration pos attrs <$> pAnnotatedType
   L.carets $ try pPair <|> pValue
 
 pPartialInterface :: HParser PartialInterfaceDefinition
@@ -393,8 +380,7 @@ pNullableType = try ((NullableT <$> pType) <* L.sym "?") <|> pType
 pAnnotatedType :: HParser TypeName
 pAnnotatedType = pAnnotatedType' pNullableType
 
-pAnnotatedType'
-  :: HParser TypeName -> HParser TypeName
+pAnnotatedType' :: HParser TypeName -> HParser TypeName
 pAnnotatedType' pInner = do
   pos        <- getSourcePos
   attributes <- hidden pExtendedAttributeList
@@ -406,9 +392,7 @@ pGenericType1
 pGenericType1 tn f = f <$> (L.sym tn *> L.carets pNullableType)
 
 pGenericType1'
-  :: Text
-  -> (forall a . TypeName a -> TypeName a)
-  -> HParser TypeName
+  :: Text -> (forall a . TypeName a -> TypeName a) -> HParser TypeName
 pGenericType1' tn f = f <$> (L.sym tn *> L.carets pAnnotatedType)
 
 sepBy2 :: Parser a -> Parser sep -> Parser [a]
@@ -454,7 +438,10 @@ pDistinguishableType =
     <|> pRecordType
 
 pUnionType :: HParser TypeName
-pUnionType = UnionT <$> L.parens (sepBy2 ((pAnnotatedType' pDistinguishableType) <|> nullable pUnionType) (L.term "or")) 
+pUnionType = UnionT <$> L.parens
+  (sepBy2 ((pAnnotatedType' pDistinguishableType) <|> nullable pUnionType)
+          (L.term "or")
+  )
 
 pRecordType :: HParser TypeName
 pRecordType = do

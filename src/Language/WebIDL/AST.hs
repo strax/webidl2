@@ -1,12 +1,9 @@
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 
 module Language.WebIDL.AST where
 
 import           Data.Data
-import           Data.Scientific
-import           Data.Set                       ( Set )
 import           Data.Text                      ( Text )
 import           GHC.Generics                   ( Generic )
 

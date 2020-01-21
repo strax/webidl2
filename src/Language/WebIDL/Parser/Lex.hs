@@ -4,7 +4,7 @@ import Prelude hiding (and, or)
 import qualified Text.Megaparsec.Char.Lexer    as L
 import Language.WebIDL.Parser.Types
 import Text.Megaparsec
-import Text.Megaparsec.Char (space1, string, alphaNumChar)
+import Text.Megaparsec.Char (space1, string)
 import Data.Text (Text)
 import Data.Scientific (Scientific)
 import Data.Char (isAsciiUpper, isAsciiLower, isDigit)
