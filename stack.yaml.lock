@@ -3,28 +3,7 @@
 # For more information, please see the documentation at:
 #   https://docs.haskellstack.org/en/stable/lock_files
 
-packages:
-- completed:
-    hackage: prelude-extras-0.4.0.3@sha256:1c10b0123ea13a6423d74a8fcbaeb2d5249b472588abde418a36b47b7c4f48c8,1163
-    pantry-tree:
-      size: 476
-      sha256: a03f60a1250c9d0daaf208ba58ccf24e05e0807f2e3dc7892fad3f2f3a196f7f
-  original:
-    hackage: prelude-extras-0.4.0.3
-- completed:
-    hackage: dependent-sum-0.6.2.0@sha256:bff37c85b38e768b942f9d81c2465b63a96076f1ba006e35612aa357770807b6,1856
-    pantry-tree:
-      size: 474
-      sha256: ad3fbed5104f9ee9c8082c9dcc8ade847674e3053572533e8d26ad1a866f1107
-  original:
-    hackage: dependent-sum-0.6.2.0
-- completed:
-    hackage: constraints-extras-0.3.0.2@sha256:bf6884be65958e9188ae3c9e5547abfd6d201df021bff8a4704c2c4fe1e1ae5b,1784
-    pantry-tree:
-      size: 594
-      sha256: b0bcc96d375ee11b1972a2e9e8e42039b3f420b0e1c46e9c70652470445a6505
-  original:
-    hackage: constraints-extras-0.3.0.2
+packages: []
 snapshots:
 - completed:
     size: 524154
