@@ -57,7 +57,7 @@ pExtendedAttributeIdentList =
     (sepBy1 pIdent L.comma)
 
 pExtendedAttributeNamedArgList :: HParser ExtendedAttribute
-pExtendedAttributeNamedArgList = do
+pExtendedAttributeNamedArgList =
   ExtendedAttributeNamedArgList <$> pIdent <* L.eq <*> pIdent <*> pArgumentList
 
 -- pArgList :: Parser (Ident, [Argument ()])
@@ -83,7 +83,7 @@ pInterface = stmt $ do
   pure $ InterfaceDefinition { ann = pos, attributes, name, members, parent }
 
 pInterfaceMember :: HParser InterfaceMember
-pInterfaceMember = do
+pInterfaceMember =
   choice
     [ L.term "static" *> pStaticMember
     , InterfaceSetlikeDeclaration <$> pSetlikeDeclaration
@@ -125,8 +125,7 @@ pMaplikeDeclaration = stmt $ do
   L.carets $ do
     keyType   <- pAnnotatedType
     _         <- L.comma
-    valueType <- pAnnotatedType
-    pure $ variant pos keyType valueType
+    variant pos keyType <$> pAnnotatedType
  where
   toConstructor True  = ReadOnlyMaplikeDeclaration
   toConstructor False = ReadWriteMaplikeDeclaration
@@ -167,7 +166,7 @@ pPartialInterface = stmt $ do
 
 
 pPartialInterfaceMember :: HParser PartialInterfaceMember
-pPartialInterfaceMember = do
+pPartialInterfaceMember =
   choice
     [ L.term "static" *> pStaticMember
     , PartialInterfaceSetlikeDeclaration <$> pSetlikeDeclaration
@@ -307,8 +306,7 @@ pConstant = stmt $ do
   ty    <- pType
   ident <- pIdent
   _     <- L.sym "="
-  value <- pConstValue
-  pure $ Constant pos ty ident value
+  Constant pos ty ident <$> pConstValue
 
 prim :: Text -> (forall a . a -> TypeName a) -> HParser TypeName
 prim tn f = f <$> getSourcePos <* L.term tn
@@ -384,8 +382,7 @@ pAnnotatedType' :: HParser TypeName -> HParser TypeName
 pAnnotatedType' pInner = do
   pos        <- getSourcePos
   attributes <- hidden pExtendedAttributeList
-  inner      <- pInner
-  pure $ AnnotatedType pos attributes inner
+  AnnotatedType pos attributes <$> pInner
 
 pGenericType1
   :: Text -> (forall a . TypeName a -> TypeName a) -> HParser TypeName
@@ -449,8 +446,7 @@ pRecordType = do
   L.carets $ do
     keyType   <- stringType
     _         <- L.comma
-    valueType <- pAnnotatedType
-    pure $ RecordT keyType valueType
+    RecordT keyType <$> pAnnotatedType
 
 
 pGetter :: HParser Getter
@@ -494,8 +490,7 @@ pStringifier = stmt $ do
           <*> pIdent
   let pStringifierOperation = do
         returnType <- pAnnotatedType
-        arguments  <- pArgumentList
-        pure $ StringifierOperation pos attrs returnType arguments
+        StringifierOperation pos attrs returnType <$> pArgumentList
   let pShorthand = pure $ StringifierOperation
         pos
         attrs
