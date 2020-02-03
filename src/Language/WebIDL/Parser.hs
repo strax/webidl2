@@ -302,7 +302,7 @@ pDictionaryMember = pRequiredMember <|> pOptionalMember
 pConstant :: HParser Constant
 pConstant = stmt $ do
   pos   <- getSourcePos
-  _     <- L.sym "const"
+  _     <- L.term "const"
   ty    <- pType
   ident <- pIdent
   _     <- L.sym "="
@@ -372,9 +372,6 @@ pType =
     <|> pAnyType
     <|> pInterfaceType
 
-pNullableType :: HParser TypeName
-pNullableType = try ((NullableT <$> pType) <* L.sym "?") <|> pType
-
 pAnnotatedType :: HParser TypeName
 pAnnotatedType = pAnnotatedType' pNullableType
 
@@ -386,20 +383,19 @@ pAnnotatedType' pInner = do
 
 pGenericType1
   :: Text -> (forall a . TypeName a -> TypeName a) -> HParser TypeName
-pGenericType1 tn f = f <$> (L.sym tn *> L.carets pNullableType)
+pGenericType1 tn f = f <$> (L.term tn *> L.carets (nullable pType))
 
 pGenericType1'
   :: Text -> (forall a . TypeName a -> TypeName a) -> HParser TypeName
-pGenericType1' tn f = f <$> (L.sym tn *> L.carets pAnnotatedType)
+pGenericType1' tn f = f <$> (L.term tn *> L.carets pAnnotatedType)
 
 sepBy2 :: Parser a -> Parser sep -> Parser [a]
 sepBy2 p sep = (:) <$> p <* sep <*> sepBy1 p sep
 
 nullable :: HParser TypeName -> HParser TypeName
 nullable p = do
-  inner  <- p
-  isNull <- modifier (L.term "?")
-  pure $ if isNull then NullableT inner else inner
+  inner <- p
+  option inner $ NullableT inner <$ L.term "?"
 
 pSymbolType :: HParser TypeName
 pSymbolType = prim "symbol" SymbolT
@@ -426,13 +422,16 @@ pDistinguishableType =
   nullable
     $   primitiveType
     <|> stringType
-    <|> pInterfaceType
     <|> pSequenceType
     <|> pObjectType
     <|> pSymbolType
     <|> pBufferRelatedType
     <|> pFrozenArrayType
     <|> pRecordType
+    <|> pInterfaceType
+
+pNullableType :: HParser TypeName
+pNullableType = nullable pType
 
 pUnionType :: HParser TypeName
 pUnionType = UnionT <$> L.parens

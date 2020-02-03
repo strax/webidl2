@@ -110,6 +110,7 @@ main = hspec $ do
     runBaseline "variadic-operations"
     runBaseline "interface-mixin"
     runBaseline "getter-return-type"
+    runBaseline "nested-sequence-and-union"
     runBaseline "url.whatwg"
 
   describe "Invalid" $ do

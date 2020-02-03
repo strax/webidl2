@@ -1,0 +1,1 @@
+typedef (sequence<sequence<USVString>> or record<USVString, USVString> or USVString) mytype;
